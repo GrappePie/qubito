@@ -1,21 +1,21 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #ffffff; /* Define un color de fondo predeterminado */
+  --foreground: #000000; /* Define un color de primer plano predeterminado */
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: 'Arial', sans-serif; /* Define una fuente predeterminada */
+  --font-mono: 'Courier New', monospace; /* Define una fuente monoespaciada predeterminada */
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --background: #000000; /* Define un color de fondo para el modo oscuro */
+    --foreground: #ffffff; /* Define un color de primer plano para el modo oscuro */
   }
 }
 
