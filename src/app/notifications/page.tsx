@@ -33,7 +33,7 @@ export default function NotificationsPage() {
     return (
         <div>
             <h1 className="text-3xl font-bold mb-6">Notifications</h1>
-            <div className="flex gap-4 mb-4">
+            <form className="flex gap-4 mb-4" onSubmit={(e) => { e.preventDefault(); handleAddNotification(); }}>
                 <select
                     value={type}
                     onChange={(e) => setType(e.target.value)}
