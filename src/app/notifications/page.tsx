@@ -34,7 +34,28 @@ export default function NotificationsPage() {
         <div>
             <h1 className="text-3xl font-bold mb-6">Notifications</h1>
             <div className="flex gap-4 mb-4">
-                <button className="bg-blue-600 text-white px-4 py-2 rounded">Add Notification</button>
+                <select
+                    value={type}
+                    onChange={(e) => setType(e.target.value)}
+                    className="text-black px-4 py-2 rounded border"
+                >
+                    <option value="email">Email</option>
+                    <option value="sms">SMS</option>
+                    <option value="whatsapp">WhatsApp</option>
+                </select>
+                <input
+                    type="text"
+                    value={address}
+                    onChange={(e) => setAddress(e.target.value)}
+                    placeholder="Address"
+                    className="px-4 py-2 rounded text-black border"
+                />
+                <button
+                    onClick={handleAddNotification}
+                    className="bg-blue-600 text-white px-4 py-2 rounded"
+                >
+                    Add Notification
+                </button>
             </div>
             <table className="w-full border-collapse bg-white rounded shadow">
                 <thead>
