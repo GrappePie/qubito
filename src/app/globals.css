@@ -19,6 +19,11 @@
   }
 }
 
+.text-blue-gray-900 {
+  --tw-text-opacity: 1;
+  color: rgb(38 50 56/var(--tw-text-opacity));
+}
+
 body {
   background: var(--background);
   color: var(--foreground);

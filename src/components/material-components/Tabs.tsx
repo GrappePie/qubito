@@ -1,4 +1,4 @@
-import {ReactElement, ReactNode, useEffect, useRef, useState} from "react";
+import { ReactNode, useEffect, useRef, useState} from "react";
 
 type Tab = {
     title: string;
@@ -16,15 +16,6 @@ export const Tab = ({value}: { value: string }) => {
             <div className="z-20 text-inherit">{value}</div>
             <div className="absolute inset-0 z-10 h-full bg-white rounded-md shadow"></div>
         </li>
-    );
-}
-export const TabsHeader = ({children}: { children: ReactElement<typeof Tab> }) => {
-    return (
-        <nav>
-            <ul role="tablist" className="flex relative bg-blue-gray-50 bg-opacity-60 rounded-lg p-1 flex-row">
-                {children}
-            </ul>
-        </nav>
     );
 }
 
@@ -52,20 +43,12 @@ export const Tabs = ({tabs, initialIndex = 0}: TabsProps) => {
     }, [currentTab]);
 
     useEffect(() => {
-        const resizeObserver = new ResizeObserver(updateTabWidth);
-        if (tabRef.current) {
-            resizeObserver.observe(tabRef.current!);
-        }
-        return () => {
-            if (tabRef.current) {
-                resizeObserver.unobserve(tabRef.current);
-            }
-        }
+        updateTabWidth();
     }, [tabs.length]);
     return (
-        <div className={"w-1/2"}>
+        <div className={"w-full p-2"}>
             <div
-                className="w-full flex items-center  justify-between relative rounded-full bg-[rgb(236,239,241)] bg-opacity-60"
+                className="w-full flex items-center p-1 justify-between relative rounded-lg bg-[rgb(236,239,241)] bg-opacity-60 overflow-hidden"
                 ref={tabRef}>
                 {tabs.map((tab, idx) => (
                     <button
@@ -73,17 +56,17 @@ export const Tabs = ({tabs, initialIndex = 0}: TabsProps) => {
                         style={{
                             width: `${tabWidth}px`,
                         }}
-                        className={"relative z-20 py-3 text-[rgb(38,50,56)] cursor-pointer h-8 text-sm"}
+                        className={"relative z-20 py-auto text-blue-gray-900 cursor-pointer h-9 text-sm "}
                         onClick={() => setCurrentTab(idx)}
                         type="button"
                     >
                         {tab.title}
                     </button>
                 ))}
-                <div className="absolute inset-0 h-6 bg-white rounded-md shadow transition-all duration-300 top-1"
+                <div className="absolute inset-0 h-8 my-auto bg-white rounded-md shadow transition-all duration-300"
                      style={{
-                         width: `${tabWidth}px`,
-                         left: `${currentTab * tabWidth}px`,
+                         width: `${tabWidth-8}px`,
+                         left: `${currentTab * tabWidth +4 }px`,
                      }}></div>
             </div>
             <div className={`p-4 ${animate ? 'fadeEffect' : ''}`}>{tabs[currentTab]?.content}</div>

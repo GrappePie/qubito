@@ -4,9 +4,9 @@ export interface ItemVariant{
     type: string;
     productIds: string[];
 }
-interface Item {
+export interface Item {
     id: string;
-    barCode:number;
+    barCode:string;
     categories:string[];
     cost:number;
     description: string;
@@ -19,10 +19,11 @@ interface Item {
     sku:       number;
     stock:     number;
     variants:  ItemVariant[];
+    supplier: string;
 }
 
 const ItemSchema = new mongoose.Schema<Item>({
-    barCode: { type: Number, required: true },
+    barCode: { type: String, required: true },
     categories: { type: [String], required: true },
     cost: { type: Number, required: true },
     description: { type: String, required: true },
@@ -34,6 +35,17 @@ const ItemSchema = new mongoose.Schema<Item>({
     price: { type: Number, required: true },
     sku: { type: Number, required: true },
     stock: { type: Number, default: 0 },
+    variants: [{
+        type: {
+            type: String,
+            required: true
+        },
+        productIds: {
+            type: [String],
+            required: true
+        }
+    }],
+    supplier: { type: String, required: true }
 }, { timestamps: true });
 
 const ItemModel: Model<Item> = mongoose.models.Item || mongoose.model<Item>('Item', ItemSchema);
