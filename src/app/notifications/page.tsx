@@ -56,7 +56,7 @@ export default function NotificationsPage() {
                 >
                     Add Notification
                 </button>
-            </div>
+            </form>
             <table className="w-full border-collapse bg-white rounded shadow">
                 <thead>
                 <tr className="bg-gray-100 text-left text-black">
