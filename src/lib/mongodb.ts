@@ -4,8 +4,16 @@ const MONGODB_URI = process.env.MONGODB_URI as string;
 
 if (!MONGODB_URI) throw new Error('MONGODB_URI is not defined');
 
-const cached: { conn: typeof mongoose | null; promise: Promise<typeof mongoose> | null } = (global as unknown as { mongoose?: { conn: typeof mongoose | null; promise: Promise<typeof mongoose> | null } }).mongoose || { conn: null, promise: null };
+interface MongooseGlobalCache {
+    conn: typeof mongoose | null;
+    promise: Promise<typeof mongoose> | null;
+}
 
+declare global {
+    var mongoose: MongooseGlobalCache | undefined;
+}
+
+const cached: MongooseGlobalCache = globalThis.mongoose || { conn: null, promise: null };
 export async function connectToDatabase() {
     if (cached.conn) return cached.conn;
 
