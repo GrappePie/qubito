@@ -4,7 +4,7 @@ const MONGODB_URI = process.env.MONGODB_URI as string;
 
 if (!MONGODB_URI) throw new Error('MONGODB_URI is not defined');
 
-let cached = (global as any).mongoose || { conn: null, promise: null };
+const cached: { conn: typeof mongoose | null; promise: Promise<typeof mongoose> | null } = (global as unknown as { mongoose?: { conn: typeof mongoose | null; promise: Promise<typeof mongoose> | null } }).mongoose || { conn: null, promise: null };
 
 export async function connectToDatabase() {
     if (cached.conn) return cached.conn;
@@ -16,6 +16,6 @@ export async function connectToDatabase() {
     }
 
     cached.conn = await cached.promise;
-    (global as any).mongoose = cached;
+    (global as unknown as { mongoose?: { conn: typeof mongoose | null; promise: Promise<typeof mongoose> | null } }).mongoose = cached;
     return cached.conn;
 }
