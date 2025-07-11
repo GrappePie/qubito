@@ -12,10 +12,13 @@ export default function Navbar() {
                 <Link href="/inventory" className="block py-2 px-4 rounded hover:bg-blue-800">
                     Inventory
                 </Link>
+                <Link href="/pos" className="block py-2 px-4 rounded hover:bg-blue-800">
+                    Punto de Venta
+                </Link>
                 <Link href="/notifications" className="block py-2 px-4 rounded hover:bg-blue-800">
                     Notifications
                 </Link>
-                <Link href={"/test"} className="block py-2 px-4 rounded hover:bg-blue-800">
+                <Link href="/test" className="block py-2 px-4 rounded hover:bg-blue-800">
                     Test Pages
                 </Link>
             </nav>
