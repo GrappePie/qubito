@@ -46,6 +46,7 @@ export default function NotificationsPage() {
         const newNotification = await res.json();
         setNotifications(prev => [...prev, newNotification]);
         setAddress('');
+        setTrigger('low_stock');
     };
 
     const openEditModal = (notification: Notification) => {
