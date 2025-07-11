@@ -76,7 +76,7 @@ export default function POSPage() {
                   type="number"
                   min={0}
                   max={p.quantity}
-                  value={cart[p._id] || ""}
+                  value={cart[p._id] ?? ""}
                   onChange={(e) => handleQtyChange(p._id, Number(e.target.value))}
                   className="border px-3 py-2 rounded w-24"
                   disabled={loading}
