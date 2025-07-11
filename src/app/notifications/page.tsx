@@ -41,7 +41,7 @@ export default function NotificationsPage() {
         const res = await fetch('/api/notifications', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ type, address, enabled: true, trigger, deleted: false }),
+            body: JSON.stringify({ type, address, enabled: true, trigger }),
         });
         const newNotification = await res.json();
         setNotifications(prev => [...prev, newNotification]);
