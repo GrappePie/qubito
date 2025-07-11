@@ -28,10 +28,10 @@ export async function POST(req: NextRequest) {
     }
     const updates = [];
     for (const { id, qty } of items) {
-        const product = await Product.findById(id);
+        const product = productMap.get(id);
         product.quantity -= qty;
-        await product.save();
         updates.push({ id, newQuantity: product.quantity });
     }
+    await Product.bulkSave(products);
     return NextResponse.json({ success: true, updates });
 }
