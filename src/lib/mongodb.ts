@@ -24,6 +24,6 @@ export async function connectToDatabase() {
     }
 
     cached.conn = await cached.promise;
-    (global as unknown as { mongoose?: { conn: typeof mongoose | null; promise: Promise<typeof mongoose> | null } }).mongoose = cached;
+    globalThis.mongoose = cached;
     return cached.conn;
 }
