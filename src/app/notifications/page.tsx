@@ -90,7 +90,7 @@ export default function NotificationsPage() {
                     <select
                         value={type}
                         onChange={(e) => setType(e.target.value)}
-                        className="px-4 py-2 rounded border"
+                        className="px-4 py-2 rounded border bg-white dark:bg-[#18181b]"
                     >
                         <option value="email">Email</option>
                         <option value="sms">SMS</option>
