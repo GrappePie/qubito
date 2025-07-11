@@ -3,12 +3,12 @@ import { connectToDatabase } from '@/lib/mongodb';
 import { Notification } from '@/models/Notification';
 import { Product } from '@/models/Product';
 
-const LOW_STOCK_THRESHOLD = 5;
+const DEFAULT_LOW_STOCK_THRESHOLD = 5;
 
 export async function GET() {
     await connectToDatabase();
 
-    const lowStockProducts = await Product.find({ quantity: { $lt: LOW_STOCK_THRESHOLD } });
+    const lowStockProducts = await Product.find({ $expr: { $lt: ["$quantity", { $ifNull: ["$minThreshold", DEFAULT_LOW_STOCK_THRESHOLD] }] } });
 
     const notifications = await Notification.find({ trigger: 'low_stock', enabled: true });
 
