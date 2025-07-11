@@ -10,7 +10,7 @@ interface Notification {
     trigger: 'low_stock' | 'out_of_stock' | 'new_product';
 }
 
-const iconMap: Record<string, JSX.Element> = {
+const iconMap: Record<Notification['type'], JSX.Element> = {
     email: <Mail size={18} />,
     sms: <PhoneCall size={18} />,
     whatsapp: <MessageCircle size={18} />,
