@@ -12,6 +12,7 @@ export async function connectToDatabase() {
     if (!cached.promise) {
         cached.promise = mongoose.connect(MONGODB_URI, {
             dbName: 'inventoryApp',
+            autoIndex: false,
         }).then(conn => conn);
     }
 
