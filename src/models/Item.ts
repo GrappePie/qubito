@@ -16,7 +16,7 @@ export interface Item {
     name:      string;
     owner:     string;
     price:     number;
-    sku:       number;
+    sku:       string;
     stock:     number;
     variants:  ItemVariant[];
     supplier: string;
@@ -33,7 +33,7 @@ const ItemSchema = new mongoose.Schema<Item>({
     name: { type: String, required: true },
     owner: { type: String, required: true },
     price: { type: Number, required: true },
-    sku: { type: Number, required: true },
+    sku: { type: String, required: true },
     stock: { type: Number, default: 0 },
     variants: [{
         type: {
