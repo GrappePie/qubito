@@ -30,7 +30,7 @@ export default function RootLayout({
         >
         <div className="flex">
             <Navbar />
-            <main className="flex-1">{children}</main>
+            <main className="flex-1 overflow-y-auto p-4">{children}</main>
         </div>
         </body>
         </html>
