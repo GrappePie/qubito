@@ -2,29 +2,26 @@ import Link from "next/link";
 import {MdHistory, MdPointOfSale} from "react-icons/md";
 import {GrMoney} from "react-icons/gr";
 import {RxDashboard} from "react-icons/rx";
-import {TbArchive, TbInvoice, TbLogout} from "react-icons/tb";
+import {TbArchive, TbCube, TbLogout} from "react-icons/tb";
 import {LiaMoneyBillSolid} from "react-icons/lia";
 import {BsBarChart, BsPeople} from "react-icons/bs";
 import {FaBarsStaggered} from "react-icons/fa6";
 import {PiTruckTrailer} from "react-icons/pi";
 import {IoMdNotificationsOutline} from "react-icons/io";
 import {IoSettingsOutline} from "react-icons/io5";
+import { LuRatio } from "react-icons/lu";
 
 
 export default function Navbar() {
     return (
         <aside className="w-64 bg-slate-800 text-white h-screen p-4">
             <div className="text-xl font-semibold mb-6 flex items-center border-b border-slate-700 pb-2 h-11">
-                <svg className="h-8 w-8 text-sky-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
-                     strokeWidth="1.5" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round"
-                          d="M21 7.5l-9-5.25L3 7.5m18 0l-9 5.25m9-5.25v9l-9 5.25M3 7.5l9 5.25M3 7.5v9l9 5.25m0-9v9"></path>
-                </svg>
+                <TbCube className="h-8 w-8 text-sky-400" />
                 <span className="ml-3 text-2xl font-bold">Qubito POS</span>
             </div>
             <div className="max-h-1/3 pt-1 overflow-y-auto">
                 <Link href="/tables" className="nav-link bg-slate-700 px-4 py-3 rounded-lg flex items-center gap-2">
-                    <TbInvoice size={25} className={"basis-1/6"}/>
+                    <LuRatio size={25} className={"basis-1/6"}/>
                     <span>Mesas</span>
                 </Link>
                 <Link href="#" className="px-4 py-3 rounded-lg flex items-center gap-2">
