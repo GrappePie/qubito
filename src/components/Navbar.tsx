@@ -24,7 +24,7 @@ export default function Navbar() {
                     <LuRatio size={25} className={"basis-1/6"}/>
                     <span>Mesas</span>
                 </Link>
-                <Link href="#" className="px-4 py-3 rounded-lg flex items-center gap-2">
+                <Link href="/sale" className="px-4 py-3 rounded-lg flex items-center gap-2">
                     <LiaMoneyBillSolid size={25} className={"basis-1/6"}/>
                     <span>Venta Rápida</span>
                 </Link>
