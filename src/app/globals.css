@@ -5,6 +5,23 @@
   --foreground: #000000; /* Define un color de primer plano predeterminado */
 }
 
+::-webkit-scrollbar {
+  width: 0.5rem;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+  background-color: #94a3b8;
+  border-radius: 10px;
+  border: 3px solid transparent;
+  background-clip: content-box;
+}
+::-webkit-scrollbar-thumb:hover {
+  background-color: rgba(0, 0, 0, 0.2);
+}
+
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -12,7 +29,7 @@
   --font-mono: 'Courier New', monospace; /* Define una fuente monoespaciada predeterminada */
 }
 
-@media (prefers-color-scheme: dark) {
+@media (prefers-color-scheme: light) {
   :root {
     --background: #000000; /* Define un color de fondo para el modo oscuro */
     --foreground: #ffffff; /* Define un color de primer plano para el modo oscuro */
@@ -151,7 +168,7 @@ tr:last-child td {
   }
 }
 
-@media (prefers-color-scheme: dark) {
+@media (prefers-color-scheme: light) {
   input, select, textarea {
     background: #18181b;
     color: #fff;

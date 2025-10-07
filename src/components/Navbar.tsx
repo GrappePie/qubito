@@ -15,6 +15,7 @@ import {
     Settings,
     Ratio,
 } from 'lucide-react';
+import Link from 'next/link';
 
 
 export default function Navbar() {
@@ -25,75 +26,75 @@ export default function Navbar() {
                 <span className="ml-3 text-2xl font-bold">Qubito POS</span>
             </div>
             <div className="max-h-1/3 pt-1 overflow-y-auto">
-                <a href="/tables" className="nav-link bg-slate-700 px-4 py-3 rounded-lg flex items-center gap-2">
+                <Link href="/tables" className="nav-link bg-slate-700 px-4 py-3 rounded-lg flex items-center gap-2">
                     <Ratio size={25} className={"basis-1/6"}/>
                     <span>Mesas</span>
-                </a>
-                <a href="/sales" className="px-4 py-3 rounded-lg flex items-center gap-2">
+                </Link>
+                <Link href="/sale" className="px-4 py-3 rounded-lg flex items-center gap-2">
                     <Wallet size={25} className={"basis-1/6"}/>
                     <span>Venta Rápida</span>
-                </a>
-                <a href="#" className="px-4 py-3 rounded-lg flex items-center gap-2">
+                </Link>
+                <Link href="#" className="px-4 py-3 rounded-lg flex items-center gap-2">
                     <Landmark size={25} className={"basis-1/6"}/>
                     <span>Corte de Caja</span>
-                </a>
-                <a href="#" className="px-4 py-3 rounded-lg flex items-center gap-2">
+                </Link>
+                <Link href="#" className="px-4 py-3 rounded-lg flex items-center gap-2">
                     <History size={25} className={"basis-1/6"}/>
                     <span>Historial de ventas</span>
-                </a>
+                </Link>
             </div>
             <hr className="border-slate-700 my-2"/>
             <div className="h-1/3 overflow-y-auto">
-                <a href="#" className="px-4 py-3 rounded-lg flex items-center gap-2">
+                <Link href="#" className="px-4 py-3 rounded-lg flex items-center gap-2">
                     <LayoutDashboard size={25} className={"basis-1/6"}/>
                     <span>Dashboard</span>
-                </a>
-                <a href="#" className="px-4 py-3 rounded-lg flex items-center gap-2">
+                </Link>
+                <Link href="#" className="px-4 py-3 rounded-lg flex items-center gap-2">
                     <BarChart  size={25} className={"basis-1/6"}/>
                     <span>Reportes</span>
-                </a>
-                <a href="/products" className="px-4 py-3 rounded-lg flex items-center gap-2">
+                </Link>
+                <Link href="/products" className="px-4 py-3 rounded-lg flex items-center gap-2">
                     <PackageIcon size={25} className={"basis-1/6"}/>
                     <span>Productos</span>
-                </a>
-                <a href="/inventory" className="px-4 py-3 rounded-lg flex items-center gap-2">
+                </Link>
+                <Link href="/inventory" className="px-4 py-3 rounded-lg flex items-center gap-2">
                     <Archive size={25} className={"basis-1/6"}/>
                     <span>Inventario</span>
-                </a>
-                <a href="#" className="px-4 py-3 rounded-lg flex items-center gap-2">
+                </Link>
+                <Link href="#" className="px-4 py-3 rounded-lg flex items-center gap-2">
                     <Users  size={25} className={"basis-1/6"}/>
                     <span>Clientes</span>
-                </a>
-                <a href="#" className="px-4 py-3 rounded-lg flex items-center gap-2">
+                </Link>
+                <Link href="#" className="px-4 py-3 rounded-lg flex items-center gap-2">
                     <Truck  size={25} className={"basis-1/6"}/>
                     <span>Proveedores</span>
-                </a>
-                <a href="/pos" className="nav-link px-4 py-3 rounded-lg flex items-center gap-2">
+                </Link>
+                <Link href="/pos" className="nav-link px-4 py-3 rounded-lg flex items-center gap-2">
                     <Store size={25} className={"basis-1/6"}/>
                     <span>Punto de Venta</span>
-                </a>
-                <a href="/notifications" className="nav-link px-4 py-3 rounded-lg flex items-center gap-2">
+                </Link>
+                <Link href="/notifications" className="nav-link px-4 py-3 rounded-lg flex items-center gap-2">
                     <Bell  size={25} className={"basis-1/6"}/>
                     <span>Notifications</span>
-                </a>
-                <a href="/test" className="nav-link px-4 py-3 rounded-lg flex items-center gap-2">
+                </Link>
+                <Link href="/test" className="nav-link px-4 py-3 rounded-lg flex items-center gap-2">
                     <span>Test</span>
-                </a>
+                </Link>
             </div>
             <hr className="border-slate-700 my-2"/>
             <div>
                 <div className={"text-center py-2"}>
                     <h6 className={"mb-0"}>Admin</h6>
-                    <a href={"#"} className={"text-sky-400 text-[12px]"}>Admin</a>
+                    <Link href={"#"} className={"text-sky-400 text-[12px]"}>Admin</Link>
                 </div>
-                <a href="#" className="nav-link px-4 py-3 rounded-lg flex items-center gap-2">
+                <Link href="#" className="nav-link px-4 py-3 rounded-lg flex items-center gap-2">
                     <Settings size={25} className={"basis-1/6"}/>
                     <span>Configuración</span>
-                </a>
-                <a href="#" className="nav-link px-4 py-3 rounded-lg flex items-center gap-2">
+                </Link>
+                <Link href="#" className="nav-link px-4 py-3 rounded-lg flex items-center gap-2">
                     <LogOut size={25} className={"basis-1/6"}/>
                     <span>Cerrar Sesión</span>
-                </a>
+                </Link>
             </div>
         </aside>
     );
