@@ -29,7 +29,7 @@
   --font-mono: 'Courier New', monospace; /* Define una fuente monoespaciada predeterminada */
 }
 
-@media (prefers-color-scheme: dark) {
+@media (prefers-color-scheme: light) {
   :root {
     --background: #000000; /* Define un color de fondo para el modo oscuro */
     --foreground: #ffffff; /* Define un color de primer plano para el modo oscuro */
@@ -168,7 +168,7 @@ tr:last-child td {
   }
 }
 
-@media (prefers-color-scheme: dark) {
+@media (prefers-color-scheme: light) {
   input, select, textarea {
     background: #18181b;
     color: #fff;
