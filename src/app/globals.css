@@ -160,6 +160,10 @@ tr:last-child td {
   width: 100%;
   font-size: 1rem;
 }
+.hide-scrollbar {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* Internet Explorer 10+ */
+}
 
 @media (max-width: 600px) {
   .modal-content {
