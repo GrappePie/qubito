@@ -19,15 +19,17 @@ const SaleContainer = () => {
                 </div>
             </div>
             {/*Categories container*/}
-            <div className={"w-full relative h-10 px-2 py-1"}>
-                <div className={"w-full min-w-0 h-full flex flex-nowrap px-4 overflow-x-auto overflow-y-hidden"}>
+            <div className={"w-full relative h-12 px-2 py-1"}>
+                <div className={"w-full min-w-0 h-full flex flex-nowrap px-4 overflow-x-auto overflow-y-hidden gap-2"}>
                     {/* Categories */}
-                    {Array.from({ length: 10 }, (x, index) => (
+                    {Array.from({ length: 20 }, (x, index) => (
                         <div
                             key={index}
-                            className={"min-w-max bg-slate-300 text-slate-800 font-semibold px-4 rounded-lg flex items-center justify-center mr-2 hover:bg-slate-400 transition-colors whitespace-nowrap"}
+                            className={"flex items-center gap-2 h-8 max-w-32 flex-shrink-0 p-1 rounded-[32px] border border-[color:var(--gm3-sys-color-outline-variant,#c4c7c5)]"}
                         >
-                            Categoría {index + 1}
+                                                        <span
+                                className="text-base tracking-[0]  mr-1 overflow-hidden text-ellipsis whitespace-nowrap">Categoría {index + 1}</span>
+
                         </div>
                     ))}
                 </div>
