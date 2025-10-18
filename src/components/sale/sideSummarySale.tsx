@@ -7,12 +7,14 @@ const TAX_RATE = 0.16;
 
 const SideSummarySale = () => {
     const dispatch = useAppDispatch();
-    const items = useAppSelector(selectCartItems); // cast due to local selector typing shape
-    const subtotal = useAppSelector(selectSubtotal);
+    const items = useAppSelector(selectCartItems);
+    const inclusiveTotal = useAppSelector(selectSubtotal); // prices assumed tax-inclusive
     const activeTableId = useAppSelector(selectActiveTableId);
     const isQuick = useAppSelector(selectIsQuickOrder);
-    const tax = subtotal * TAX_RATE;
-    const total = subtotal + tax;
+    // Derive net subtotal (before tax) and tax portion from inclusive total
+    const netSubtotal = inclusiveTotal / (1 + TAX_RATE);
+    const tax = inclusiveTotal - netSubtotal;
+    const total = inclusiveTotal; // already includes tax
 
     return (
         <div className="w-full h-full bg-slate-50 border-l border-gray-300 p-4 flex flex-col min-h-0">
@@ -39,12 +41,9 @@ const SideSummarySale = () => {
 
             {/* Footer */}
             <div className="w-full mt-2 pt-4 border-t space-y-1">
-                <div className="flex justify-between text-slate-600"><span>Subtotal</span><span
-                    id="cart-subtotal">${subtotal.toFixed(2)}</span></div>
-                <div className="flex justify-between text-slate-600"><span>Impuestos (16%)</span><span
-                    id="cart-tax">${tax.toFixed(2)}</span></div>
-                <div className="flex justify-between font-bold text-xl text-slate-800 mt-2"><span>Total</span><span
-                    id="cart-total">${total.toFixed(2)}</span></div>
+                <div className="flex justify-between text-slate-600"><span>Subtotal (sin impuesto)</span><span>${netSubtotal.toFixed(2)}</span></div>
+                <div className="flex justify-between text-slate-600"><span>Impuesto ({(TAX_RATE*100).toFixed(0)}%)</span><span>${tax.toFixed(2)}</span></div>
+                <div className="flex justify-between font-bold text-xl text-slate-800 mt-2"><span>Total (incluye impuesto)</span><span>${total.toFixed(2)}</span></div>
             </div>
             <div className="w-full grid grid-cols-2 gap-4 mt-4">
                 <button
