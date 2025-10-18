@@ -6,8 +6,8 @@ import { selectCartItems, selectSubtotal } from "@/store/slices/cartSlice";
 const TAX_RATE = 0.16;
 
 const SideSummarySale = () => {
-    const items = useAppSelector(selectCartItems as any); // cast due to local selector typing shape
-    const subtotal = useAppSelector(selectSubtotal as any);
+    const items = useAppSelector(selectCartItems); // cast due to local selector typing shape
+    const subtotal = useAppSelector(selectSubtotal);
     const tax = subtotal * TAX_RATE;
     const total = subtotal + tax;
 
