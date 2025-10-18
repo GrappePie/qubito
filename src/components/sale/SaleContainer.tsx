@@ -1,9 +1,15 @@
+"use client";
 import TopSearchBar from "@/components/sale/TopSearchBar";
 import { IoMdArrowBack } from "react-icons/io";
 import ProductsContainer from "@/components/sale/ProductsContainer";
+import React, { useState } from "react";
+import CategoryChipsContainer from "@/components/sale/CategoryChipsContainer";
 
+
+const categories = Array.from({ length: 20 }, (_, i) => `Categoría ${i + 1}`);
 
 const SaleContainer = () => {
+    const [selectedCategory, setSelectedCategory] = useState<number | null>(null);
     return (
         <div className={"w-full h-full min-h-0 flex flex-col"}>
             {/* Search bar container */}
@@ -19,21 +25,11 @@ const SaleContainer = () => {
                 </div>
             </div>
             {/*Categories container*/}
-            <div className={"w-full relative h-12 px-2 py-1"}>
-                <div className={"w-full min-w-0 h-full flex flex-nowrap px-4 overflow-x-auto overflow-y-hidden gap-2"}>
-                    {/* Categories */}
-                    {Array.from({ length: 20 }, (x, index) => (
-                        <div
-                            key={index}
-                            className={"flex items-center gap-2 h-8 max-w-32 flex-shrink-0 p-1 rounded-[32px] border border-[color:var(--gm3-sys-color-outline-variant,#c4c7c5)]"}
-                        >
-                                                        <span
-                                className="text-base tracking-[0]  mr-1 overflow-hidden text-ellipsis whitespace-nowrap">Categoría {index + 1}</span>
-
-                        </div>
-                    ))}
-                </div>
-            </div>
+            <CategoryChipsContainer
+                categories={categories}
+                selectedCategory={selectedCategory}
+                setSelectedCategory={setSelectedCategory}
+            />
             {/* Products container */}
             <div className={"flex-1 m-2 overflow-y-auto"}>
                 <ProductsContainer/>
