@@ -2,7 +2,7 @@
 import TopSearchBar from "@/components/sale/TopSearchBar";
 import { IoMdArrowBack } from "react-icons/io";
 import ProductsContainer from "@/components/sale/ProductsContainer";
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import CategoryChipsContainer from "@/components/sale/CategoryChipsContainer";
 import { useAppSelector } from "@/store/hooks";
 import { selectActiveTableId, selectIsQuickOrder } from "@/store/slices/cartSlice";

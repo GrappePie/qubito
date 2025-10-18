@@ -1,6 +1,6 @@
 "use client";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
-import { setActiveTable, selectSubtotalForTable, startQuickOrder, selectSubtotal } from "@/store/slices/cartSlice";
+import { setActiveTable, selectSubtotalForTable, startQuickOrder } from "@/store/slices/cartSlice";
 import { useRouter } from "next/navigation";
 
 interface TableProps {
