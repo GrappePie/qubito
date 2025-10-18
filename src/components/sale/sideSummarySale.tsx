@@ -1,20 +1,29 @@
 "use client";
 import CartItemRow from "@/components/sale/CartItemRow";
-import { useAppSelector } from "@/store/hooks";
-import { selectCartItems, selectSubtotal } from "@/store/slices/cartSlice";
+import { useAppSelector, useAppDispatch } from "@/store/hooks";
+import { selectCartItems, selectSubtotal, selectActiveTableId, selectIsQuickOrder, clearActiveTableCart } from "@/store/slices/cartSlice";
 
 const TAX_RATE = 0.16;
 
 const SideSummarySale = () => {
+    const dispatch = useAppDispatch();
     const items = useAppSelector(selectCartItems); // cast due to local selector typing shape
     const subtotal = useAppSelector(selectSubtotal);
+    const activeTableId = useAppSelector(selectActiveTableId);
+    const isQuick = useAppSelector(selectIsQuickOrder);
     const tax = subtotal * TAX_RATE;
     const total = subtotal + tax;
 
     return (
         <div className="w-full h-full bg-slate-50 border-l border-gray-300 p-4 flex flex-col min-h-0">
-            {/* Header */}
-            <h2 className="text-xl font-bold">Orden</h2>
+            <div className="flex items-center justify-between mb-2">
+                <h2 className="text-xl font-bold">{isQuick ? 'Orden Rápida' : `Mesa #${activeTableId}`}</h2>
+                <button
+                    className="text-xs px-3 py-1 rounded bg-slate-200 hover:bg-slate-300 text-slate-700 disabled:opacity-40"
+                    disabled={items.length === 0}
+                    onClick={() => dispatch(clearActiveTableCart())}
+                >Vaciar</button>
+            </div>
 
             {/* Parte scrolleable */}
             <div className="flex-1 flex min-h-0 p-2">

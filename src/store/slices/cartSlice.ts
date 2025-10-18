@@ -1,4 +1,4 @@
-// cartSlice.ts - manages shopping cart state per table
+// cartSlice.ts - manages shopping cart state per table or standalone quick order
 "use client";
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 
@@ -11,13 +11,15 @@ export interface CartItem {
 }
 
 interface CartState {
-  activeTableId: number | null;
+  activeTableId: number | null; // null -> quick order
   carts: Record<number, CartItem[]>; // tableId -> items
+  standalone: CartItem[]; // quick order items
 }
 
 const initialState: CartState = {
   activeTableId: null,
-  carts: {}
+  carts: {},
+  standalone: []
 };
 
 interface AddItemPayload { id: string; title: string; price: number; image?: string; }
@@ -27,19 +29,28 @@ const ensureTable = (state: CartState, tableId: number) => {
   if (!state.carts[tableId]) state.carts[tableId] = [];
 };
 
+const getActiveItems = (state: CartState): CartItem[] => {
+  if (state.activeTableId == null) return state.standalone;
+  ensureTable(state, state.activeTableId);
+  return state.carts[state.activeTableId];
+};
+
 const cartSlice = createSlice({
   name: 'cart',
   initialState,
   reducers: {
-    setActiveTable: (state, action: PayloadAction<number>) => {
+    setActiveTable: (state, action: PayloadAction<number | null>) => {
       state.activeTableId = action.payload;
-      ensureTable(state, action.payload);
+      if (action.payload != null) ensureTable(state, action.payload);
+    },
+    startQuickOrder: (state) => {
+      state.activeTableId = null;
+    },
+    clearActiveTable: (state) => {
+      state.activeTableId = null;
     },
     addItem: (state, action: PayloadAction<AddItemPayload>) => {
-      const tableId = state.activeTableId;
-      if (tableId == null) return; // ignore if no active table selected
-      ensureTable(state, tableId);
-      const items = state.carts[tableId];
+      const items = getActiveItems(state);
       const { id, title, price, image } = action.payload;
       const existing = items.find(i => i.id === id);
       if (existing) {
@@ -49,17 +60,12 @@ const cartSlice = createSlice({
       }
     },
     removeItem: (state, action: PayloadAction<string>) => {
-      const tableId = state.activeTableId;
-      if (tableId == null) return;
-      const items = state.carts[tableId];
-      if (!items) return;
-      state.carts[tableId] = items.filter(i => i.id !== action.payload);
+      const items = getActiveItems(state);
+      const idx = items.findIndex(i => i.id === action.payload);
+      if (idx >= 0) items.splice(idx, 1);
     },
     updateQuantity: (state, action: PayloadAction<UpdateQuantityPayload>) => {
-      const tableId = state.activeTableId;
-      if (tableId == null) return;
-      const items = state.carts[tableId];
-      if (!items) return;
+      const items = getActiveItems(state);
       const { id, delta, quantity } = action.payload;
       const item = items.find(i => i.id === id);
       if (!item) return;
@@ -70,29 +76,36 @@ const cartSlice = createSlice({
       }
     },
     clearActiveTableCart: (state) => {
-      const tableId = state.activeTableId;
-      if (tableId == null) return;
-      state.carts[tableId] = [];
+      if (state.activeTableId == null) {
+        state.standalone = [];
+      } else {
+        state.carts[state.activeTableId] = [];
+      }
     },
-    clearTableCart: (state, action: PayloadAction<number>) => {
-      state.carts[action.payload] = [];
+    clearTableCart: (state, action: PayloadAction<number | 'standalone'>) => {
+      if (action.payload === 'standalone') {
+        state.standalone = [];
+      } else {
+        state.carts[action.payload] = [];
+      }
     }
   }
 });
 
-export const { setActiveTable, addItem, removeItem, updateQuantity, clearActiveTableCart, clearTableCart } = cartSlice.actions;
+export const { setActiveTable, startQuickOrder, clearActiveTable, addItem, removeItem, updateQuantity, clearActiveTableCart, clearTableCart } = cartSlice.actions;
 
-// Selectors (RootState not imported to avoid circular in slice definition)
+// Selectors
 export const selectActiveTableId = (state: { cart: CartState }) => state.cart.activeTableId;
-export const selectCartItemsForTable = (tableId: number) => (state: { cart: CartState }) => state.cart.carts[tableId] || [];
-export const selectSubtotalForTable = (tableId: number) => (state: { cart: CartState }) => (state.cart.carts[tableId] || []).reduce((acc, i) => acc + i.price * i.quantity, 0);
-export const selectCartItems = (state: { cart: CartState }) => {
-  const id = state.cart.activeTableId;
-  return id == null ? [] : (state.cart.carts[id] || []);
+export const selectIsQuickOrder = (state: { cart: CartState }) => state.cart.activeTableId == null;
+export const selectCartItemsForTable = (tableId: number | 'standalone') => (state: { cart: CartState }) => {
+  if (tableId === 'standalone') return state.cart.standalone;
+  return state.cart.carts[tableId] || [];
 };
-export const selectSubtotal = (state: { cart: CartState }) => {
-  const id = state.cart.activeTableId;
-  return id == null ? 0 : (state.cart.carts[id] || []).reduce((acc, i) => acc + i.price * i.quantity, 0);
+export const selectSubtotalForTable = (tableId: number | 'standalone') => (state: { cart: CartState }) => {
+  const items = (tableId === 'standalone') ? state.cart.standalone : (state.cart.carts[tableId] || []);
+  return items.reduce((acc, i) => acc + i.price * i.quantity, 0);
 };
+export const selectCartItems = (state: { cart: CartState }) => state.cart.activeTableId == null ? state.cart.standalone : (state.cart.carts[state.cart.activeTableId] || []);
+export const selectSubtotal = (state: { cart: CartState }) => selectCartItems(state).reduce((acc, i) => acc + i.price * i.quantity, 0);
 
 export default cartSlice.reducer;
