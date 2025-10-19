@@ -7,6 +7,7 @@
 
 ::-webkit-scrollbar {
   width: 0.5rem;
+  height: 0.5rem;
 }
 ::-webkit-scrollbar-track {
   background: transparent;
@@ -159,6 +160,10 @@ tr:last-child td {
   max-width: 95vw;
   width: 100%;
   font-size: 1rem;
+}
+.hide-scrollbar {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* Internet Explorer 10+ */
 }
 
 @media (max-width: 600px) {
