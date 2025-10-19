@@ -1,4 +1,4 @@
-import { ReactNode, useEffect, useRef, useState} from "react";
+import { ReactNode, useEffect, useRef, useState, useCallback } from "react";
 
 type Tab = {
     title: string;
@@ -25,17 +25,19 @@ export const Tabs = ({tabs, initialIndex = 0}: TabsProps) => {
     const [currentTab, setCurrentTab] = useState(initialIndex);
     const [animate, setAnimate] = useState(false);
 
-    const updateTabWidth = () => {
+    const updateTabWidth = useCallback(() => {
         if (tabRef.current) {
             const parentWidth = tabRef.current.getBoundingClientRect().width;
             const numberOfTabs = tabs.length;
             const newTabWidth = parentWidth / numberOfTabs;
             setTabWidth(newTabWidth);
         }
-    }
+    }, [tabs.length]);
+
     useEffect(() => {
         setCurrentTab(initialIndex);
     }, [initialIndex]);
+
     useEffect(() => {
         setAnimate(true);
         const timeout = setTimeout(() => setAnimate(false), 500); // duración de la animación
@@ -44,7 +46,11 @@ export const Tabs = ({tabs, initialIndex = 0}: TabsProps) => {
 
     useEffect(() => {
         updateTabWidth();
-    }, [tabs.length]);
+        const handleResize = () => updateTabWidth();
+        window.addEventListener('resize', handleResize);
+        return () => window.removeEventListener('resize', handleResize);
+    }, [updateTabWidth]);
+
     return (
         <div className={"w-full p-2"}>
             <div

@@ -2,13 +2,26 @@
 "use client";
 import { configureStore } from '@reduxjs/toolkit';
 import cartReducer from './slices/cartSlice';
+import { productsApi } from './slices/productsApi';
+import { inventoryApi } from './slices/inventoryApi';
+import { notificationsApi } from './slices/notificationsApi';
+import { categoriesApi } from './slices/categoriesApi';
 
 export const store = configureStore({
   reducer: {
-    cart: cartReducer
-  }
+    cart: cartReducer,
+    [productsApi.reducerPath]: productsApi.reducer,
+    [inventoryApi.reducerPath]: inventoryApi.reducer,
+    [notificationsApi.reducerPath]: notificationsApi.reducer,
+    [categoriesApi.reducerPath]: categoriesApi.reducer,
+  },
+  middleware: (getDefaultMiddleware) =>
+    getDefaultMiddleware()
+      .concat(productsApi.middleware)
+      .concat(inventoryApi.middleware)
+      .concat(notificationsApi.middleware)
+      .concat(categoriesApi.middleware),
 });
 
 export type RootState = ReturnType<typeof store.getState>;
 export type AppDispatch = typeof store.dispatch;
-

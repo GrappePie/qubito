@@ -1,39 +1,23 @@
 "use client";
 
-import React, { useState, useEffect, FormEvent, ChangeEvent } from 'react';
+import React, { useState, FormEvent, ChangeEvent, useMemo } from 'react';
 import { Plus, Edit, Trash2 } from 'lucide-react';
+import {
+    useGetProductsQuery,
+    useCreateProductMutation,
+    useUpdateProductMutation,
+    useDeleteProductMutation,
+    type ProductDTO,
+    type UpsertProductPayload,
+} from '@/store/slices/productsApi';
+import TitlePage from '@/components/common/TitlePage';
+import Image from 'next/image';
+import { toast } from 'react-hot-toast';
+import MultiCategorySelect from '@/components/common/MultiCategorySelect';
+import { useGetCategoriesQuery, useCreateCategoryMutation, type CategoryDTO } from '@/store/slices/categoriesApi';
 
-// Interfaz para el componente TitlePage, ahora definido localmente
-interface TitlePageProps  {
-    title: string,
-    subtitle?: string,
-};
-
-// Componente TitlePage, ahora definido localmente para evitar problemas de importación
-const TitlePage = ({title,subtitle}:TitlePageProps) => {
-    return (
-        <div className={"p-4"}>
-            <h1 className={"text-3xl font-bold text-slate-800"}>
-                {title}
-            </h1>
-            {subtitle ? <p className={"text-slate-500 mt-1"}>{subtitle}</p> : null}
-        </div>
-    );
-};
-
-
-// Interfaz para el objeto de producto, alineada con el modelo de la base de datos
-interface Product {
-    _id?: string;
-    name: string;
-    sku: string;
-    price: number;
-    cost: number;
-    stock: number;
-    lowStock: number;
-    categories: string[];
-    imageUrl: string;
-}
+// Tipo alineado con backend (Mongoose usa _id)
+type Product = ProductDTO;
 
 const emptyProduct: Product = {
     name: '',
@@ -43,45 +27,63 @@ const emptyProduct: Product = {
     stock: 0,
     lowStock: 0,
     categories: [''],
-    imageUrl: ''
+    imageUrl: '',
+    // Campos adicionales opcionales que el backend espera
+    barCode: '',
+    description: 'Sin descripción',
+    owner: 'admin',
+    supplier: 'Sin proveedor',
+    variants: [],
 };
 
 export default function ProductsPage() {
-    const [products, setProducts] = useState<Product[]>([]);
-    const [isLoading, setIsLoading] = useState(true);
+    // Data desde RTK Query
+    const { data: products = [], isLoading, isFetching } = useGetProductsQuery();
+    const [createProduct, { isLoading: isCreating }] = useCreateProductMutation();
+    const [updateProduct, { isLoading: isUpdating }] = useUpdateProductMutation();
+    const [deleteProduct, { isLoading: isDeleting }] = useDeleteProductMutation();
+    const { data: categories = [] } = useGetCategoriesQuery();
+    const [createCategory] = useCreateCategoryMutation();
+
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
     const [currentProduct, setCurrentProduct] = useState<Product | null>(null);
     const [productToDelete, setProductToDelete] = useState<Product | null>(null);
 
-    // Función para obtener los productos de la API
-    const fetchProducts = async () => {
-        setIsLoading(true);
-        try {
-            const res = await fetch(`${window.location.origin}/api/products`);
-            if (!res.ok) throw new Error('Error fetching products');
-            const data = await res.json();
-            setProducts(data);
-        } catch (error) {
-            console.error(error);
-        } finally {
-            setIsLoading(false);
+    // Categorías únicas derivadas de los productos existentes
+    const existingCategories = useMemo(() => {
+        const fromProducts = new Map<string, string>();
+        for (const p of products) {
+            const cat = p.categories?.[0];
+            if (typeof cat === 'string') {
+                const key = cat.trim().toLowerCase();
+                if (key && !fromProducts.has(key)) fromProducts.set(key, cat);
+            }
         }
-    };
+        const fromApi = new Map<string, string>();
+        for (const c of (categories as CategoryDTO[])) {
+            const key = c.name.trim().toLowerCase();
+            if (key && c.isActive && !fromApi.has(key)) fromApi.set(key, c.name);
+        }
+        // priorizar nombres tal cual en API, luego los de productos
+        const map = new Map<string, string>([...fromProducts, ...fromApi]);
+        return Array.from(map.values()).sort((a, b) => a.localeCompare(b, 'es', { sensitivity: 'base' }));
+    }, [products, categories]);
 
-    useEffect(() => {
-        fetchProducts();
-    }, []);
+    // Categorías nuevas agregadas en el modal actual (no persistentes hasta guardar algún producto)
+    const [extraCategories, setExtraCategories] = useState<string[]>([]);
 
     // Manejadores del modal de edición/creación
     const handleOpenModal = (product: Product | null) => {
-        setCurrentProduct(product ? { ...product } : emptyProduct);
+        setCurrentProduct(product ? { ...product } : { ...emptyProduct });
+        setExtraCategories([]); // limpiar categorías añadidas locales al abrir
         setIsModalOpen(true);
     };
 
     const handleCloseModal = () => {
         setIsModalOpen(false);
         setCurrentProduct(null);
+        setExtraCategories([]);
     };
 
     // Manejadores del modal de confirmación de borrado
@@ -95,75 +97,118 @@ export default function ProductsPage() {
         setProductToDelete(null);
     };
 
-    const handleChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const handleChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
         if (!currentProduct) return;
-        const { name, value, type } = e.target;
+        const { name, value } = e.target;
+        const numericFields = new Set(['price', 'cost', 'stock', 'lowStock']);
         setCurrentProduct({
             ...currentProduct,
-            [name]: type === 'number' ? parseFloat(value) || 0 : value
+            [name]: numericFields.has(name) ? (parseFloat(value as string) || 0) : value
         });
     };
 
-    // El campo de categoría en el formulario es un string, pero el modelo espera un array
-    const handleCategoryChange = (e: ChangeEvent<HTMLInputElement>) => {
+    // Agregar categoría a la lista local para sugerencias (crear en API y seleccionar)
+    const handleAddCategoryOption = async (val: string) => {
+        const key = val.trim().toLowerCase();
+        if (!key) return;
+        const exists = existingCategories.some((c) => c.trim().toLowerCase() === key) ||
+            extraCategories.some((c) => c.trim().toLowerCase() === key);
+        if (exists) {
+            // si ya existe, solo añádela a seleccionadas (si no estaba)
+            if (currentProduct && !currentProduct.categories?.some(c => c.trim().toLowerCase() === key)) {
+                setCurrentProduct({ ...currentProduct, categories: [...(currentProduct.categories || []), val] });
+            }
+            return;
+        }
+        try {
+            const created = await createCategory({ name: val }).unwrap();
+            setExtraCategories((prev) => [...prev, created.name]);
+            if (currentProduct) {
+                setCurrentProduct({ ...currentProduct, categories: [...(currentProduct.categories || []), created.name] });
+            }
+            toast.success('Categoría agregada');
+        } catch (e) {
+            console.error('No se pudo crear la categoría', e);
+            toast.error('No se pudo crear la categoría');
+        }
+    };
+
+    // Actualiza la selección completa de categorías (chips)
+    const handleCategoriesChange = (vals: string[]) => {
         if (!currentProduct) return;
-        setCurrentProduct({
-            ...currentProduct,
-            categories: [e.target.value]
-        });
+        setCurrentProduct({ ...currentProduct, categories: vals });
     };
 
     const handleSubmit = async (e: FormEvent) => {
         e.preventDefault();
         if (!currentProduct) return;
 
-        // Agregar campos requeridos por el modelo backend si no existen
-        const productToSend = {
+        // Validación: todas las categorías seleccionadas deben ser válidas
+        const allowed = new Set(categoryOptions.map((c) => c.trim().toLowerCase()));
+        const chosen = (currentProduct.categories || []).map((c) => c.trim().toLowerCase()).filter(Boolean);
+        if (chosen.length === 0) {
+            toast.error('Selecciona al menos una categoría');
+            return;
+        }
+        const allValid = chosen.every((k) => allowed.has(k));
+        if (!allValid) {
+            toast.error('Alguna categoría no es válida. Agrega primero con el botón o selecciona de la lista');
+            return;
+        }
+
+        const payload: UpsertProductPayload = {
             ...currentProduct,
-            barCode: currentProduct.barCode || currentProduct.sku || '',
-            description: (currentProduct as any).description || 'Sin descripción',
-            owner: (currentProduct as any).owner || 'admin',
-            supplier: (currentProduct as any).supplier || 'Sin proveedor',
-            variants: (currentProduct as any).variants || [],
+            barCode: currentProduct.barCode ?? currentProduct.sku ?? '',
+            description: currentProduct.description ?? 'Sin descripción',
+            owner: currentProduct.owner ?? 'admin',
+            supplier: currentProduct.supplier ?? 'Sin proveedor',
+            variants: currentProduct.variants ?? [],
         };
 
-        const url = currentProduct._id ? `${window.location.origin}/api/products/${currentProduct._id}` : `${window.location.origin}/api/products`;
-        const method = currentProduct._id ? 'PUT' : 'POST';
-
         try {
-            const res = await fetch(url, {
-                method,
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(productToSend)
-            });
-
-            if (res.ok) {
-                handleCloseModal();
-                await fetchProducts(); // Recargar productos
+            if (currentProduct._id) {
+                await updateProduct({ id: currentProduct._id, data: payload }).unwrap();
+                toast.success('Producto actualizado');
             } else {
-                console.error("Error saving product");
+                await createProduct(payload).unwrap();
+                toast.success('Producto creado');
             }
+            handleCloseModal();
         } catch (error) {
-            console.error(error);
+            console.error('Error al guardar el producto', error);
+            toast.error('No se pudo guardar el producto');
         }
     };
 
     const handleDelete = async () => {
         if (!productToDelete?._id) return;
         try {
-            const res = await fetch(`${window.location.origin}/api/products/${productToDelete._id}`, {
-                method: 'DELETE'
-            });
-            if (res.ok) {
-                handleCloseDeleteModal();
-                await fetchProducts(); // Recargar productos
-            } else {
-                console.error("Error deleting product");
-            }
+            await deleteProduct(productToDelete._id).unwrap();
+            toast.success('Producto eliminado');
+            handleCloseDeleteModal();
         } catch (error) {
-            console.error(error);
+            console.error('Error al eliminar el producto', error);
+            toast.error('No se pudo eliminar el producto');
         }
     };
+
+    const isBusy = isLoading || isFetching || isCreating || isUpdating || isDeleting;
+
+    // Opciones de categorías combinando existentes + añadidas en el modal
+    const categoryOptions = useMemo(() => {
+        const map = new Map<string, string>();
+        for (const c of existingCategories) {
+            const k = c.trim().toLowerCase();
+            if (k) map.set(k, c);
+        }
+        for (const c of extraCategories) {
+            const k = c.trim().toLowerCase();
+            if (k && !map.has(k)) map.set(k, c);
+        }
+        return Array.from(map.values());
+    }, [existingCategories, extraCategories]);
+
+    // const currentCategory = currentProduct?.categories?.[0] ?? '';
 
     return (
         <div>
@@ -196,10 +241,26 @@ export default function ProductsPage() {
                     ) : products.map(product => (
                         <tr key={product._id}>
                             <td className="p-4 flex items-center">
-                                <img src={product.imageUrl || 'https://placehold.co/40x40/e2e8f0/475569?text=Img'} className="rounded-md mr-4 h-10 w-10 object-cover" alt={product.name} />
+                                {/* Imagen del producto */}
+                                <Image
+                                    src={product.imageUrl || 'https://placehold.co/40x40/e2e8f0/475569?text=Img'}
+                                    alt={product.name}
+                                    width={40}
+                                    height={40}
+                                    className="rounded-md mr-4 h-10 w-10 object-cover"
+                                    unoptimized
+                                />
                                 <div>
                                     <span className="font-medium text-slate-800">{product.name}</span>
-                                    <p className="text-xs text-slate-500">{product.categories[0]}</p>
+                                    <div className="mt-1 flex flex-wrap gap-1">
+                                        {(product.categories && product.categories.length > 0) ? (
+                                            product.categories.map((cat) => (
+                                                <span key={cat} className="px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 text-[10px] border border-slate-200">{cat}</span>
+                                            ))
+                                        ) : (
+                                            <span className="px-2 py-0.5 rounded-full bg-slate-100 text-slate-600 text-[10px] border border-slate-200">General</span>
+                                        )}
+                                    </div>
                                 </div>
                             </td>
                             <td className="p-4 text-slate-500">{product.sku}</td>
@@ -207,8 +268,8 @@ export default function ProductsPage() {
                             <td className="p-4 text-slate-500">${product.cost.toFixed(2)}</td>
                             <td className="p-4 text-slate-500">{product.stock}</td>
                             <td className="p-4">
-                                <button onClick={() => handleOpenModal(product)} className="text-sky-600 hover:text-sky-800 font-medium p-2"><Edit size={18} /></button>
-                                <button onClick={() => handleOpenDeleteModal(product)} className="text-red-600 hover:text-red-800 font-medium ml-2 p-2"><Trash2 size={18} /></button>
+                                <button onClick={() => handleOpenModal(product)} className="text-sky-600 hover:text-sky-800 font-medium p-2" disabled={isBusy}><Edit size={18} /></button>
+                                <button onClick={() => handleOpenDeleteModal(product)} className="text-red-600 hover:text-red-800 font-medium ml-2 p-2" disabled={isBusy}><Trash2 size={18} /></button>
                             </td>
                         </tr>
                     ))}
@@ -231,41 +292,68 @@ export default function ProductsPage() {
                                     <input type="text" id="product-name" name="name" value={currentProduct.name} onChange={handleChange} required className="mt-1 block w-full" />
                                 </div>
                                 <div>
-                                    <label htmlFor="product-category" className="block text-sm font-medium text-slate-700">Categoría</label>
-                                    <input type="text" id="product-category" name="category" value={currentProduct.categories[0] || ''} onChange={handleCategoryChange} required className="mt-1 block w-full" />
+                                    <MultiCategorySelect
+                                        label="Categorías"
+                                        values={currentProduct?.categories || []}
+                                        options={categoryOptions}
+                                        onChange={handleCategoriesChange}
+                                        onAddOption={handleAddCategoryOption}
+                                        placeholder="Selecciona o agrega categorías"
+                                        disabled={isBusy}
+                                    />
                                 </div>
                                 <div>
                                     <label htmlFor="product-sku" className="block text-sm font-medium text-slate-700">SKU</label>
                                     <input type="text" id="product-sku" name="sku" value={currentProduct.sku} onChange={handleChange} required className="mt-1 block w-full" />
                                 </div>
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div>
-                                        <label htmlFor="product-price" className="block text-sm font-medium text-slate-700">Precio</label>
-                                        <input type="number" id="product-price" name="price" value={currentProduct.price} onChange={handleChange} required className="mt-1 block w-full" step="0.01" />
-                                    </div>
-                                    <div>
-                                        <label htmlFor="product-cost" className="block text-sm font-medium text-slate-700">Costo</label>
-                                        <input type="number" id="product-cost" name="cost" value={currentProduct.cost} onChange={handleChange} required className="mt-1 block w-full" step="0.01" />
-                                    </div>
-                                </div>
-                                <div className="grid grid-cols-2 gap-4">
-                                    <div>
-                                        <label htmlFor="product-stock" className="block text-sm font-medium text-slate-700">Stock</label>
-                                        <input type="number" id="product-stock" name="stock" value={currentProduct.stock} onChange={handleChange} required className="mt-1 block w-full" />
-                                    </div>
-                                    <div>
-                                        <label htmlFor="product-lowStock" className="block text-sm font-medium text-slate-700">Nivel Bajo Stock</label>
-                                        <input type="number" id="product-lowStock" name="lowStock" value={currentProduct.lowStock} onChange={handleChange} required className="mt-1 block w-full" />
-                                    </div>
+                                <div>
+                                    <label htmlFor="product-price" className="block text-sm font-medium text-slate-700">Precio</label>
+                                    <input type="number" id="product-price" name="price" value={currentProduct.price} onChange={handleChange} required className="mt-1 block w-full" />
                                 </div>
                                 <div>
-                                    <label htmlFor="product-imageUrl" className="block text-sm font-medium text-slate-700">URL de la Imagen</label>
-                                    <input type="text" id="product-imageUrl" name="imageUrl" value={currentProduct.imageUrl} onChange={handleChange} required className="mt-1 block w-full" />
+                                    <label htmlFor="product-cost" className="block text-sm font-medium text-slate-700">Costo</label>
+                                    <input type="number" id="product-cost" name="cost" value={currentProduct.cost} onChange={handleChange} required className="mt-1 block w-full" />
+                                </div>
+                                <div>
+                                    <label htmlFor="product-stock" className="block text-sm font-medium text-slate-700">Stock</label>
+                                    <input type="number" id="product-stock" name="stock" value={currentProduct.stock} onChange={handleChange} required className="mt-1 block w-full" />
+                                </div>
+                                <div>
+                                    <label htmlFor="product-image" className="block text-sm font-medium text-slate-700">Imagen URL</label>
+                                    <input type="text" id="product-image" name="imageUrl" value={currentProduct.imageUrl} onChange={handleChange} className="mt-1 block w-full" />
+                                </div>
+                                <div>
+                                    <label htmlFor="product-barcode" className="block text-sm font-medium text-slate-700">Código de Barras</label>
+                                    <input type="text" id="product-barcode" name="barCode" value={currentProduct.barCode} onChange={handleChange} className="mt-1 block w-full" />
+                                </div>
+                                <div>
+                                    <label htmlFor="product-description" className="block text-sm font-medium text-slate-700">Descripción</label>
+                                    <textarea id="product-description" name="description" value={currentProduct.description} onChange={handleChange} className="mt-1 block w-full resize-none h-20" />
+                                </div>
+                                <div>
+                                    <label htmlFor="product-owner" className="block text-sm font-medium text-slate-700">Propietario</label>
+                                    <input type="text" id="product-owner" name="owner" value={currentProduct.owner} onChange={handleChange} className="mt-1 block w-full" />
+                                </div>
+                                <div>
+                                    <label htmlFor="product-supplier" className="block text-sm font-medium text-slate-700">Proveedor</label>
+                                    <input type="text" id="product-supplier" name="supplier" value={currentProduct.supplier} onChange={handleChange} className="mt-1 block w-full" />
                                 </div>
                             </div>
-                            <div className="bg-slate-50 p-6 rounded-b-xl flex justify-end space-x-4">
-                                <button type="button" onClick={handleCloseModal} className="bg-white border border-slate-300 text-slate-700 font-semibold px-6 py-3 rounded-lg hover:bg-slate-50">Cancelar</button>
-                                <button type="submit" className="bg-sky-500 text-white font-semibold px-6 py-3 rounded-lg hover:bg-sky-600">Guardar</button>
+                            <div className="p-6 flex justify-end space-x-4">
+                                <button
+                                    type="button"
+                                    onClick={handleCloseModal}
+                                    className="bg-slate-200 text-slate-700 font-semibold px-4 py-2 rounded-lg hover:bg-slate-300 transition-colors"
+                                >
+                                    Cancelar
+                                </button>
+                                <button
+                                    type="submit"
+                                    className="bg-sky-500 text-white font-semibold px-4 py-2 rounded-lg hover:bg-sky-600 transition-colors flex items-center"
+                                    disabled={isBusy}
+                                >
+                                    {isBusy ? 'Guardando...' : 'Guardar'}
+                                </button>
                             </div>
                         </form>
                     </div>
@@ -275,16 +363,29 @@ export default function ProductsPage() {
             {/* Modal de Confirmación de Borrado */}
             {isDeleteModalOpen && productToDelete && (
                 <div className="fixed inset-0 bg-slate-900 bg-opacity-50 flex items-center justify-center p-4 z-50">
-                    <div className="bg-white rounded-xl shadow-2xl w-full max-w-sm">
-                        <div className="p-6 text-center">
-                            <h3 className="mt-4 text-lg font-medium text-slate-900">¿Eliminar Producto?</h3>
-                            <p className="mt-2 text-sm text-slate-500">
-                                ¿Estás seguro de que quieres eliminar "{productToDelete.name}"? Esta acción no se puede deshacer.
-                            </p>
+                    <div className="bg-white rounded-xl shadow-2xl w-full max-w-md">
+                        <div className="p-6 border-b">
+                            <h2 className="text-xl font-bold text-slate-800">Eliminar Producto</h2>
                         </div>
-                        <div className="bg-slate-50 px-6 py-4 rounded-b-xl flex justify-center space-x-4">
-                            <button onClick={handleCloseDeleteModal} className="bg-white border border-slate-300 text-slate-700 font-semibold px-6 py-2 rounded-lg hover:bg-slate-50">Cancelar</button>
-                            <button onClick={handleDelete} className="bg-red-600 text-white font-semibold px-6 py-2 rounded-lg hover:bg-red-700">Eliminar</button>
+                        <div className="p-6">
+                            <p className="text-slate-600 mb-4">
+                                ¿Estás seguro de que deseas eliminar el producto <span className="font-semibold">{productToDelete.name}</span>? Esta acción no se puede deshacer.
+                            </p>
+                            <div className="flex justify-end space-x-4">
+                                <button
+                                    onClick={handleCloseDeleteModal}
+                                    className="bg-slate-200 text-slate-700 font-semibold px-4 py-2 rounded-lg hover:bg-slate-300 transition-colors"
+                                >
+                                    Cancelar
+                                </button>
+                                <button
+                                    onClick={handleDelete}
+                                    className="bg-red-600 text-white font-semibold px-4 py-2 rounded-lg hover:bg-red-700 transition-colors"
+                                    disabled={isBusy}
+                                >
+                                    {isBusy ? 'Eliminando...' : 'Eliminar'}
+                                </button>
+                            </div>
                         </div>
                     </div>
                 </div>

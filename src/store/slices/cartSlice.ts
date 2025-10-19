@@ -8,6 +8,7 @@ export interface CartItem {
   price: number; // unit price
   quantity: number;
   image?: string;
+  stock?: number; // máximo permitido según inventario
 }
 
 interface CartState {
@@ -22,7 +23,7 @@ const initialState: CartState = {
   standalone: []
 };
 
-interface AddItemPayload { id: string; title: string; price: number; image?: string; }
+interface AddItemPayload { id: string; title: string; price: number; image?: string; stock?: number; }
 interface UpdateQuantityPayload { id: string; delta?: number; quantity?: number; }
 
 const ensureTable = (state: CartState, tableId: number) => {
@@ -51,12 +52,15 @@ const cartSlice = createSlice({
     },
     addItem: (state, action: PayloadAction<AddItemPayload>) => {
       const items = getActiveItems(state);
-      const { id, title, price, image } = action.payload;
+      const { id, title, price, image, stock } = action.payload;
       const existing = items.find(i => i.id === id);
+      const max = typeof stock === 'number' ? stock : (existing?.stock ?? Infinity);
+      if (max <= 0) return; // no agregar si no hay stock
       if (existing) {
-        existing.quantity += 1;
+        existing.stock = max; // mantener actualizado
+        existing.quantity = Math.min(existing.quantity + 1, max);
       } else {
-        items.push({ id, title, price, quantity: 1, image });
+        items.push({ id, title, price, quantity: Math.min(1, max), image, stock: max });
       }
     },
     removeItem: (state, action: PayloadAction<string>) => {
@@ -69,10 +73,12 @@ const cartSlice = createSlice({
       const { id, delta, quantity } = action.payload;
       const item = items.find(i => i.id === id);
       if (!item) return;
+      const max = typeof item.stock === 'number' ? item.stock : Infinity;
+      const effMax = Math.max(1, max);
       if (typeof quantity === 'number') {
-        item.quantity = Math.max(1, quantity);
+        item.quantity = Math.min(Math.max(1, quantity), effMax);
       } else if (typeof delta === 'number') {
-        item.quantity = Math.max(1, item.quantity + delta);
+        item.quantity = Math.min(Math.max(1, item.quantity + delta), effMax);
       }
     },
     clearActiveTableCart: (state) => {
