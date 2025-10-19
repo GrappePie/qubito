@@ -1,55 +1,46 @@
 'use client';
-import React, {JSX, useEffect, useState} from 'react';
+import React, {JSX, useState} from 'react';
 import { Mail, MessageCircle, PhoneCall } from 'lucide-react';
+import {
+    useGetNotificationsQuery,
+    useAddNotificationMutation,
+    useUpdateNotificationMutation,
+    useDeleteNotificationMutation,
+    type NotificationDTO,
+} from '@/store/slices/notificationsApi';
+import { toast } from 'react-hot-toast';
 
-interface Notification {
-    _id: string;
-    type: 'email' | 'sms' | 'whatsapp';
-    address: string;
-    enabled: boolean;
-    trigger: 'low_stock' | 'out_of_stock' | 'new_product';
-}
-
-const iconMap: Record<Notification['type'], JSX.Element> = {
+const iconMap: Record<NotificationDTO['type'], JSX.Element> = {
     email: <Mail size={18} />,
     sms: <PhoneCall size={18} />,
     whatsapp: <MessageCircle size={18} />,
 };
 
 export default function NotificationsPage() {
-    const [notifications, setNotifications] = useState<Notification[]>([]);
-    const [type, setType] = useState('email');
-    const [address, setAddress] = useState('');
-    const [trigger, setTrigger] = useState<'low_stock' | 'out_of_stock' | 'new_product'>('low_stock');
-    const [editModal, setEditModal] = useState<{ open: boolean, notification: Notification | null }>({ open: false, notification: null });
-    const [editForm, setEditForm] = useState({ type: 'email', address: '', trigger: 'low_stock' as 'low_stock' | 'out_of_stock' | 'new_product', enabled: true });
+    const { data: notifications = [], isLoading } = useGetNotificationsQuery();
+    const [addNotification, { isLoading: isAdding }] = useAddNotificationMutation();
+    const [updateNotification, { isLoading: isUpdating }] = useUpdateNotificationMutation();
+    const [deleteNotification, { isLoading: isDeleting }] = useDeleteNotificationMutation();
 
-    useEffect(() => {
-        fetch('/api/notifications')
-            .then(async res => {
-                if (!res.ok) return [];
-                try {
-                    return await res.json();
-                } catch {
-                    return [];
-                }
-            })
-            .then(data => setNotifications(Array.isArray(data) ? data : []));
-    }, []);
+    const [type, setType] = useState<NotificationDTO['type']>('email');
+    const [address, setAddress] = useState('');
+    const [trigger, setTrigger] = useState<NotificationDTO['trigger']>('low_stock');
+    const [editModal, setEditModal] = useState<{ open: boolean, notification: NotificationDTO | null }>({ open: false, notification: null });
+    const [editForm, setEditForm] = useState<NotificationDTO>({ type: 'email', address: '', trigger: 'low_stock', enabled: true });
 
     const handleAddNotification = async () => {
-        const res = await fetch('/api/notifications', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ type, address, enabled: true, trigger }),
-        });
-        const newNotification = await res.json();
-        setNotifications(prev => [...prev, newNotification]);
-        setAddress('');
-        setTrigger('low_stock');
+        try {
+            await addNotification({ type, address, enabled: true, trigger }).unwrap();
+            setAddress('');
+            setTrigger('low_stock');
+            toast.success('Notificación creada');
+        } catch (e) {
+            console.error(e);
+            toast.error('No se pudo crear la notificación');
+        }
     };
 
-    const openEditModal = (notification: Notification) => {
+    const openEditModal = (notification: NotificationDTO) => {
         setEditForm({
             type: notification.type,
             address: notification.address,
@@ -64,22 +55,19 @@ export default function NotificationsPage() {
         setEditForm(prev => ({
             ...prev,
             [name]: inputType === 'checkbox' ? (e.target as HTMLInputElement).checked : value
-        }));
+        } as NotificationDTO));
     };
 
     const handleEditSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!editModal.notification) return;
-        const res = await fetch(`/api/notifications?id=${editModal.notification._id}`, {
-            method: 'PUT',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(editForm),
-        });
-        if (res.ok) {
+        if (!editModal.notification || !editModal.notification._id) return;
+        try {
+            await updateNotification({ id: editModal.notification._id, changes: editForm }).unwrap();
             setEditModal({ open: false, notification: null });
-            fetch('/api/notifications')
-                .then(res => res.json())
-                .then(data => setNotifications(Array.isArray(data) ? data : []));
+            toast.success('Notificación actualizada');
+        } catch (err) {
+            console.error(err);
+            toast.error('No se pudo actualizar la notificación');
         }
     };
 
@@ -90,7 +78,7 @@ export default function NotificationsPage() {
                 <form className="flex gap-4 mb-4" onSubmit={(e) => { e.preventDefault(); handleAddNotification(); }}>
                     <select
                         value={type}
-                        onChange={(e) => setType(e.target.value)}
+                        onChange={(e) => setType(e.target.value as NotificationDTO['type'])}
                         className="px-4 py-2 rounded border bg-white dark:bg-[#18181b]"
                     >
                         <option value="email">Email</option>
@@ -99,7 +87,7 @@ export default function NotificationsPage() {
                     </select>
                     <select
                         value={trigger}
-                        onChange={e => setTrigger(e.target.value as 'low_stock' | 'out_of_stock' | 'new_product')}
+                        onChange={e => setTrigger(e.target.value as NotificationDTO['trigger'])}
                         className="px-4 py-2 rounded border bg-white dark:bg-[#18181b]"
                         style={{ minWidth: 160 }}
                     >
@@ -117,6 +105,7 @@ export default function NotificationsPage() {
                     <button
                         type="submit"
                         className="bg-blue-600 text-white px-4 py-2 rounded"
+                        disabled={isAdding}
                     >
                         Add Notification
                     </button>
@@ -132,7 +121,9 @@ export default function NotificationsPage() {
                         </tr>
                     </thead>
                     <tbody>
-                        {notifications.map((n: Notification) => (
+                        {isLoading ? (
+                            <tr><td className="p-3" colSpan={5}>Cargando...</td></tr>
+                        ) : notifications.map((n) => (
                             <tr key={n._id} className="border-t text-black">
                                 <td className="p-3 flex items-center gap-2">{iconMap[n.type] || '🔔'} {n.type}</td>
                                 <td className="p-3">{n.trigger}</td>
@@ -144,11 +135,15 @@ export default function NotificationsPage() {
                                     <>
                                         <button type="button" className="px-3 py-1 rounded bg-yellow-400 text-black" onClick={() => openEditModal(n)}>Editar</button>
                                         <button type="button" className="px-3 py-1 rounded bg-red-500 text-white" onClick={async () => {
-                                            await fetch(`/api/notifications?id=${n._id}`, { method: 'DELETE' });
-                                            fetch('/api/notifications')
-                                                .then(res => res.json())
-                                                .then(data => setNotifications(Array.isArray(data) ? data : []));
-                                        }}>Eliminar</button>
+                                            if (!n._id) return;
+                                            try {
+                                                await deleteNotification(n._id).unwrap();
+                                                toast.success('Notificación eliminada');
+                                            } catch (e) {
+                                                console.error(e);
+                                                toast.error('No se pudo eliminar la notificación');
+                                            }
+                                        }} disabled={isDeleting}>Eliminar</button>
                                     </>
                                 </td>
                             </tr>
@@ -204,7 +199,7 @@ export default function NotificationsPage() {
                             </label>
                             <div className="flex gap-2 justify-end">
                                 <button type="button" className="px-4 py-2 rounded bg-gray-200" onClick={() => setEditModal({ open: false, notification: null })}>Cancelar</button>
-                                <button type="submit" className="px-4 py-2 rounded bg-blue-600 text-white">Guardar cambios</button>
+                                <button type="submit" className="px-4 py-2 rounded bg-blue-600 text-white" disabled={isUpdating}>Guardar cambios</button>
                             </div>
                         </form>
                     </div>

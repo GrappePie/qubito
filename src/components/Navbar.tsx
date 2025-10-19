@@ -16,15 +16,16 @@ import {
     Bell,
     Settings,
     Ratio,
+    Tags,
 } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { PropsWithChildren, MouseEvent } from 'react';
+import { PropsWithChildren, MouseEvent, ComponentType } from 'react';
 import { useAppDispatch } from '../store/hooks';
 import { startQuickOrder } from '../store/slices/cartSlice';
 
 // Reusable component for a nav link that handles active state styling
-function NavItem({ href, icon: Icon, children, onClick }: PropsWithChildren<{ href: string; icon?: any; onClick?: (e: MouseEvent) => void }>) {
+function NavItem({ href, icon: Icon, children, onClick }: PropsWithChildren<{ href: string; icon?: ComponentType<{ size?: number; className?: string }>; onClick?: (e: MouseEvent) => void }>) {
     const pathname = usePathname();
     const isActive = href !== '#' && (pathname === href || (href !== '/' && pathname.startsWith(href)));
 
@@ -65,6 +66,7 @@ export default function Navbar() {
                 <NavItem href="#" icon={LayoutDashboard}>Dashboard</NavItem>
                 <NavItem href="#" icon={BarChart}>Reportes</NavItem>
                 <NavItem href="/products" icon={PackageIcon}>Productos</NavItem>
+                <NavItem href="/categories" icon={Tags}>Categorías</NavItem>
                 <NavItem href="/inventory" icon={Archive}>Inventario</NavItem>
                 <NavItem href="#" icon={Users}>Clientes</NavItem>
                 <NavItem href="#" icon={Truck}>Proveedores</NavItem>
