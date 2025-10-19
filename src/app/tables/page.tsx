@@ -3,8 +3,8 @@ import TablesComponent from "@/components/tables/TablesComponent";
 
 const tables = Array.from({ length: 20 }, (_, i) => ({
     number: i + 1,
-    total: i == 11 ? 12.5 : 0,
 }));
+
 const Tables = () => {
     return (
         <div>

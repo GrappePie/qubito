@@ -1,60 +1,27 @@
 "use client";
 
-import React, { useState, useEffect, FormEvent, ChangeEvent } from 'react';
+import React, { useState, FormEvent, ChangeEvent } from 'react';
+import TitlePage from '@/components/common/TitlePage';
+import { useGetProductsQuery, type ProductDTO } from '@/store/slices/productsApi';
+import { useAdjustStockMutation, useLazyGetHistoryQuery, type AdjustmentEntry } from '@/store/slices/inventoryApi';
+import { toast } from 'react-hot-toast';
 
-// Interfaz para el componente TitlePage, ahora definido localmente
-interface TitlePageProps {
-    title: string;
-    subtitle?: string;
-}
-
-// Componente TitlePage, ahora definido localmente para evitar problemas de importación
-const TitlePage = ({ title, subtitle }: TitlePageProps) => {
-    return (
-        <div className="p-4">
-            <h1 className="text-3xl font-bold text-slate-800">{title}</h1>
-            {subtitle ? <p className="text-slate-500 mt-1">{subtitle}</p> : null}
-        </div>
-    );
-};
-
-// Interfaz para el objeto de producto
-interface Product {
-    _id: string;
-    name: string;
-    sku: string;
-    stock: number;
-    lowStock: number;
-}
+// Interfaz para el objeto de producto según productos API
+type Product = ProductDTO & { _id: string };
 
 export default function InventoryPage() {
-    const [products, setProducts] = useState<Product[]>([]);
-    const [isLoading, setIsLoading] = useState(true);
+    const { data: products = [], isLoading, refetch } = useGetProductsQuery();
+    const [adjustStock, { isLoading: isAdjusting }] = useAdjustStockMutation();
+    const [triggerGetHistory] = useLazyGetHistoryQuery();
+
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [currentProduct, setCurrentProduct] = useState<Product | null>(null);
     const [newStock, setNewStock] = useState(0);
     const [reason, setReason] = useState("");
+
     const [isHistoryModalOpen, setIsHistoryModalOpen] = useState(false);
-    const [history, setHistory] = useState<any[]>([]);
+    const [history, setHistory] = useState<AdjustmentEntry[]>([]);
     const [historyProduct, setHistoryProduct] = useState<Product | null>(null);
-
-    const fetchProducts = async () => {
-        setIsLoading(true);
-        try {
-            const res = await fetch('/api/products');
-            if (!res.ok) throw new Error('Error fetching products');
-            const data = await res.json();
-            setProducts(data);
-        } catch (error) {
-            console.error(error);
-        } finally {
-            setIsLoading(false);
-        }
-    };
-
-    useEffect(() => {
-        fetchProducts();
-    }, []);
 
     const handleOpenModal = (product: Product) => {
         setCurrentProduct(product);
@@ -80,21 +47,15 @@ export default function InventoryPage() {
     const handleSubmit = async (e: FormEvent) => {
         e.preventDefault();
         if (!currentProduct) return;
-
         try {
-            const res = await fetch(`/api/inventory/adjust`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ productId: currentProduct._id, newStock, reason })
-            });
-            if (res.ok) {
-                handleCloseModal();
-                await fetchProducts();
-            } else {
-                console.error("Error updating stock");
-            }
+            await adjustStock({ productId: currentProduct._id, newStock, reason }).unwrap();
+            toast.success('Stock actualizado');
+            handleCloseModal();
+            // Intentar refrescar productos para reflejar cambios (si aplica)
+            await refetch();
         } catch (error) {
             console.error(error);
+            toast.error('No se pudo actualizar el stock');
         }
     };
 
@@ -102,13 +63,15 @@ export default function InventoryPage() {
         setHistoryProduct(product);
         setIsHistoryModalOpen(true);
         try {
-            const res = await fetch(`/api/inventory/history?productId=${product._id}`);
-            if (!res.ok) throw new Error('Error al obtener historial');
-            const data = await res.json();
-            setHistory(data.history || []);
+            const res = await triggerGetHistory({ productId: product._id }).unwrap();
+            setHistory(res.history || []);
+            if ((res.history || []).length === 0) {
+                toast('Sin historial de ajustes', { icon: 'ℹ️' });
+            }
         } catch (error) {
             setHistory([]);
             console.error(error);
+            toast.error('No se pudo cargar el historial');
         }
     };
 
@@ -146,7 +109,9 @@ export default function InventoryPage() {
                     <tbody className="divide-y divide-slate-200">
                     {isLoading ? (
                         <tr><td colSpan={6} className="text-center p-8 text-slate-500">Cargando...</td></tr>
-                    ) : products.map(product => (
+                    ) : (
+                        // Filtrar a una lista segura donde _id existe
+                        (products.filter((p): p is Product => Boolean(p._id)) as Product[]).map((product) => (
                         <tr key={product._id}>
                             <td className="p-4 font-medium text-slate-800">{product.name}</td>
                             <td className="p-4 text-slate-500">{product.sku}</td>
@@ -154,11 +119,11 @@ export default function InventoryPage() {
                             <td className="p-4 text-slate-500">{product.lowStock}</td>
                             <td className="p-4">{getStatusBadge(product)}</td>
                             <td className="p-4">
-                                <button onClick={() => handleOpenModal(product)} className="text-sky-600 hover:text-sky-800 font-medium mr-2">Ajustar</button>
+                                <button onClick={() => handleOpenModal(product)} className="text-sky-600 hover:text-sky-800 font-medium mr-2" disabled={isAdjusting}>Ajustar</button>
                                 <button onClick={() => handleOpenHistoryModal(product)} className="text-amber-600 hover:text-amber-800 font-medium">Ver historial</button>
                             </td>
                         </tr>
-                    ))}
+                    )))}
                     </tbody>
                 </table>
             </div>
@@ -188,7 +153,7 @@ export default function InventoryPage() {
                             </div>
                             <div className="bg-slate-50 p-6 rounded-b-xl flex justify-end space-x-4">
                                 <button type="button" onClick={handleCloseModal} className="bg-white border border-slate-300 text-slate-700 font-semibold px-6 py-3 rounded-lg hover:bg-slate-50">Cancelar</button>
-                                <button type="submit" className="bg-sky-500 text-white font-semibold px-6 py-3 rounded-lg hover:bg-sky-600">Guardar Ajuste</button>
+                                <button type="submit" className="bg-sky-500 text-white font-semibold px-6 py-3 rounded-lg hover:bg-sky-600" disabled={isAdjusting}>Guardar Ajuste</button>
                             </div>
                         </form>
                     </div>
