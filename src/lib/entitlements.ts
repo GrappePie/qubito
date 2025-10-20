@@ -11,6 +11,7 @@ export type EntitlementsPayload = {
 } & Record<string, unknown>;
 
 const ENTITLEMENTS_SECRET = process.env.ENTITLEMENTS_JWT_SECRET;
+
 // Allow configuring the expected JWT issuer. Defaults to the documented value
 // and supports a comma-separated list for safe rotations. jsonwebtoken's types
 // require non-empty tuple for multiple issuers.
