@@ -9,6 +9,7 @@ export interface CartItem {
   quantity: number;
   image?: string;
   stock?: number; // máximo permitido según inventario
+  sku?: string;
 }
 
 interface CartState {
@@ -23,7 +24,7 @@ const initialState: CartState = {
   standalone: []
 };
 
-interface AddItemPayload { id: string; title: string; price: number; image?: string; stock?: number; }
+interface AddItemPayload { id: string; title: string; price: number; image?: string; stock?: number; sku?: string; }
 interface UpdateQuantityPayload { id: string; delta?: number; quantity?: number; }
 
 const ensureTable = (state: CartState, tableId: number) => {
@@ -52,15 +53,16 @@ const cartSlice = createSlice({
     },
     addItem: (state, action: PayloadAction<AddItemPayload>) => {
       const items = getActiveItems(state);
-      const { id, title, price, image, stock } = action.payload;
+      const { id, title, price, image, stock, sku } = action.payload;
       const existing = items.find(i => i.id === id);
       const max = typeof stock === 'number' ? stock : (existing?.stock ?? Infinity);
       if (max <= 0) return; // no agregar si no hay stock
       if (existing) {
         existing.stock = max; // mantener actualizado
         existing.quantity = Math.min(existing.quantity + 1, max);
+        if (sku) existing.sku = sku;
       } else {
-        items.push({ id, title, price, quantity: Math.min(1, max), image, stock: max });
+        items.push({ id, title, price, quantity: Math.min(1, max), image, stock: max, sku });
       }
     },
     removeItem: (state, action: PayloadAction<string>) => {
@@ -81,6 +83,14 @@ const cartSlice = createSlice({
         item.quantity = Math.min(Math.max(1, item.quantity + delta), effMax);
       }
     },
+    setActiveCartItems: (state, action: PayloadAction<CartItem[]>) => {
+      if (state.activeTableId == null) {
+        state.standalone = action.payload;
+      } else {
+        ensureTable(state, state.activeTableId);
+        state.carts[state.activeTableId] = action.payload;
+      }
+    },
     clearActiveTableCart: (state) => {
       if (state.activeTableId == null) {
         state.standalone = [];
@@ -98,7 +108,7 @@ const cartSlice = createSlice({
   }
 });
 
-export const { setActiveTable, startQuickOrder, clearActiveTable, addItem, removeItem, updateQuantity, clearActiveTableCart, clearTableCart } = cartSlice.actions;
+export const { setActiveTable, startQuickOrder, clearActiveTable, addItem, removeItem, updateQuantity, setActiveCartItems, clearActiveTableCart, clearTableCart } = cartSlice.actions;
 
 // Selectors
 export const selectActiveTableId = (state: { cart: CartState }) => state.cart.activeTableId;

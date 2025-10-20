@@ -8,11 +8,12 @@ interface ProductProps {
   id: string;
   title: string;
   price: number;
+  sku?: string;
   image?: string;
   stock?: number;
 }
 
-const Product = ({ id, title, price, image, stock }: ProductProps) => {
+const Product = ({ id, title, price, sku, image, stock }: ProductProps) => {
   const dispatch = useAppDispatch();
   const items = useAppSelector(selectCartItems);
   const current = items.find(i => i.id === id);
@@ -24,7 +25,7 @@ const Product = ({ id, title, price, image, stock }: ProductProps) => {
       toast.error('No hay más stock disponible para este producto');
       return;
     }
-    dispatch(addItem({ id, title, price, image, stock }));
+    dispatch(addItem({ id, title, price, image, stock, sku }));
   };
 
   const outOfStock = max <= 0;
