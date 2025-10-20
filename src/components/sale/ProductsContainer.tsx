@@ -16,6 +16,7 @@ const ProductsContainer: React.FC<ProductsContainerProps> = ({ products }) => {
           id={((p._id as string) || p.sku)}
           title={p.name}
           price={p.price}
+          sku={p.sku}
           image={p.imageUrl}
           stock={p.stock}
         />

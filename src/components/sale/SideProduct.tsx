@@ -1,3 +1,5 @@
+"use client";
+
 interface props{
     title: string;
     price: number;

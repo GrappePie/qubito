@@ -1,4 +1,6 @@
-import {ReactNode} from "react";
+"use client";
+
+import { ReactNode } from "react";
 
 type DialogProps = {
     open: boolean;
@@ -9,15 +11,19 @@ type DialogProps = {
 export const Dialog = ({open, handler, children}: DialogProps) => {
     if (!open) return null;
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center max-w-lg backdrop-blur-sm size-max min-w-screen max-w-screen h-screen ">
+        <div className="fixed inset-0 z-50 flex items-center justify-center backdrop-blur-sm">
             <div
-                className="fixed inset-0  bg-black opacity-60"
+                className="fixed inset-0 bg-black opacity-60"
                 onClick={handler}
-                aria-label="Close dialog"
+                aria-label="Cerrar"
             />
-                <div className="relative bg-white rounded-lg shadow-lg p-6 z-10 min-w-1/4 max-w-2/3">
-                    {children}
-                </div>
+            <div
+                className="relative z-10 w-full max-w-2xl rounded-lg bg-white p-6 shadow-lg"
+                role="dialog"
+                aria-modal="true"
+            >
+                {children}
+            </div>
         </div>
     );
 }
