@@ -32,12 +32,32 @@ export function EntitlementsProvider({ children }: { children: React.ReactNode }
   const [data, setData] = useState<VerifiedEntitlements | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [forbidden, setForbidden] = useState(false);
+  const isLocalBypass = useMemo(() => {
+    if (typeof window === "undefined") return false;
+    return /^(localhost|127\.0\.0\.1)$/i.test(window.location.hostname);
+  }, []);
 
   const refresh = useCallback(async () => {
     if (DEBUG_ENTITLEMENTS) console.log("[EntitlementsContext] refresh() starting");
     setLoading(true);
     setError(null);
     setForbidden(false);
+
+    if (isLocalBypass) {
+      if (DEBUG_ENTITLEMENTS) console.log("[EntitlementsContext] bypassing entitlements on localhost");
+      setData({
+        ok: true,
+        sub: "local-dev",
+        customerId: null,
+        entitlements: ["pos.basic"],
+        iat: null,
+        exp: null,
+        iss: "localhost",
+        aud: "qubito",
+      });
+      setLoading(false);
+      return;
+    }
     try {
       const res = await getEntitlements("pos.basic");
       setData(res);
@@ -74,7 +94,7 @@ export function EntitlementsProvider({ children }: { children: React.ReactNode }
       if (DEBUG_ENTITLEMENTS) console.log("[EntitlementsContext] refresh() finished");
       setLoading(false);
     }
-  }, []);
+  }, [isLocalBypass]);
 
   useEffect(() => {
     // Fire once on mount

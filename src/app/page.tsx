@@ -1,7 +1,7 @@
+"use client";
+
+import HomeIntro from "@/components/HomeIntro";
+
 export default function HomePage() {
-    return (
-        <>
-            Qubito Inventory App
-        </>
-    );
+  return <HomeIntro />;
 }
