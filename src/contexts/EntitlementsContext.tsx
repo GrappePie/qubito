@@ -53,7 +53,9 @@ export function EntitlementsProvider({ children }: { children: React.ReactNode }
       // Handle known markers from getEntitlements
       if (msg === "unauthenticated") {
         const base = process.env.NEXT_PUBLIC_ENTITLEMENTS_BASE_URL || process.env.ENTITLEMENTS_BASE_URL || "";
-        const current = typeof window !== "undefined" ? window.location.href : "/";
+        // On unauthenticated, send users to landing sign-in with a redirect
+        // back to the Qubito origin (not the full path), as requested.
+        const current = typeof window !== "undefined" ? window.location.origin : "/";
         if (base) {
           const loginUrl = `${base.replace(/\/$/, "")}/sign-in?redirect=${encodeURIComponent(current)}`;
           // Redirect to landing login.
