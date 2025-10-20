@@ -79,9 +79,24 @@ export function verifyEntitlementsToken(token: string) {
 }
 ```
 
+### Implemented Qubito endpoint
+Qubito provides `GET/POST /api/qubito/entitlements` to verify a token returned by the landing page.
+
+- Request (POST):
+  - Body: `{ "token": "<jwt>", "required": "pos.basic" }` (optional `aud`, defaults to `"qubito"`).
+- Request (GET):
+  - Query: `?token=<jwt>&required=pos.basic&aud=qubito`.
+- Response: `200` with `{ ok, entitlements, sub, customerId, iat, exp }` or `401/403` on failure.
+
+Client flow example:
+1. Frontend calls `POST ${ENTITLEMENTS_BASE_URL}/api/entitlements/token` with `credentials: 'include'`.
+2. Receive `{ token }` and POST it to `/api/qubito/entitlements` with `required: 'pos.basic'`.
+3. If `200`, cache entitlements client-side for up to `exp`.
+4. If `401`, redirect user to sign-in on landing. If `403`, show upgrade/switch UI.
+
 ## Frontend workflow inside Qubito
 - On app boot, call `/api/qubito/entitlements` (a Qubito-owned endpoint) that wraps the token exchange.
-- If the backend endpoint returns `401`, redirect users to the landing page for sign-in (`https://pixelgrimoire.com/login?redirect=https://qubito.pixelgrimoire.com`).
+- If the backend endpoint returns `401`, redirect users to the landing page for sign-in (`https://pixelgrimoire.com/sign-in?redirect=https://qubito.pixelgrimoire.com`).
 - If the backend endpoint returns `403`, show the subscription upgrade UI or the scheduled switch message. Fetch `/api/projects/current` to display `pendingEffectiveAt` and the target app.
 
 ## Local development
