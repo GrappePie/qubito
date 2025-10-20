@@ -55,16 +55,23 @@ Triggers a change of project selection when users pick a different subdomain app
 - Include `aud: "qubito"` on every token request. Without it, the landing page cannot enforce the ProjectSelection restriction.
 - Revalidate tokens frequently. Do not rely on tokens longer than the `exp` time.
 
+Environment variables:
+- `ENTITLEMENTS_JWT_SECRET`: shared HS256 secret.
+- `ENTITLEMENTS_ISSUER` (optional): expected issuer string or a comma-separated list. Defaults to `pixelgrimoire-entitlements`.
+
 Example Node helper:
 ```ts
 import jwt from "jsonwebtoken";
 
 const ENTITLEMENTS_SECRET = process.env.ENTITLEMENTS_JWT_SECRET!;
+const ENTITLEMENTS_ISSUER: string | string[] = (process.env.ENTITLEMENTS_ISSUER
+  ? process.env.ENTITLEMENTS_ISSUER.split(",").map((s) => s.trim()).filter(Boolean)
+  : "pixelgrimoire-entitlements");
 
 export function verifyEntitlementsToken(token: string) {
   const payload = jwt.verify(token, ENTITLEMENTS_SECRET, {
     audience: "qubito",
-    issuer: "pixelgrimoire-entitlements"
+    issuer: ENTITLEMENTS_ISSUER
   });
 
   if (!payload || typeof payload !== "object") {

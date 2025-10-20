@@ -33,6 +33,9 @@ Qubito POS es una plataforma de punto de venta pensada para cafeterias y restaur
 	MONGODB_URI="mongodb+srv://<usuario>:<password>@cluster"
 	ENTITLEMENTS_JWT_SECRET="<secreto-compartido>"
 	ENTITLEMENTS_BASE_URL="https://pixelgrimoire.com"
+	# Emisor esperado del JWT de entitlements (opcional; por defecto
+	# "pixelgrimoire-entitlements"). Acepta lista separada por comas.
+	ENTITLEMENTS_ISSUER="pixelgrimoire-entitlements"
 	```
 3. Ejecutar servidor de desarrollo:
 	```bash
