@@ -23,10 +23,10 @@ export default function EntitlementsGate({ children }: { children: React.ReactNo
         <div className="flex gap-3">
           <a
             className="px-3 py-2 bg-gray-900 text-white rounded"
-            href={(process.env.NEXT_PUBLIC_ENTITLEMENTS_BASE_URL || process.env.ENTITLEMENTS_BASE_URL || "https://pixelgrimoire.com").replace(/\/$/, "") + "/#pricing"}
+            href={(process.env.NEXT_PUBLIC_ENTITLEMENTS_BASE_URL || process.env.ENTITLEMENTS_BASE_URL || "https://pixelgrimoire.com").replace(/\/$/, "")}
             target="_blank" rel="noreferrer"
           >
-            Ver planes
+            Ir al sitio
           </a>
           <button className="px-3 py-2 border rounded" onClick={() => window.location.reload()}>
             Reintentar
@@ -50,4 +50,3 @@ export default function EntitlementsGate({ children }: { children: React.ReactNo
 
   return <>{children}</>;
 }
-
