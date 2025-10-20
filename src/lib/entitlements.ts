@@ -11,6 +11,20 @@ export type EntitlementsPayload = {
 } & Record<string, unknown>;
 
 const ENTITLEMENTS_SECRET = process.env.ENTITLEMENTS_JWT_SECRET;
+// Allow configuring the expected JWT issuer. Defaults to the documented value
+// and supports a comma-separated list for safe rotations. jsonwebtoken's types
+// require non-empty tuple for multiple issuers.
+const DEFAULT_ISSUER = "pixelgrimoire-entitlements";
+const ISSUER_ENV = process.env.ENTITLEMENTS_ISSUER;
+const ISSUERS = ISSUER_ENV
+  ? ISSUER_ENV.split(",").map((s) => s.trim()).filter(Boolean)
+  : [] as string[];
+const ENTITLEMENTS_ISSUER: string | [string, ...string[]] =
+  ISSUERS.length === 0
+    ? DEFAULT_ISSUER
+    : ISSUERS.length === 1
+      ? ISSUERS[0]
+      : [ISSUERS[0], ...ISSUERS.slice(1)];
 
 if (!ENTITLEMENTS_SECRET) {
   // We avoid throwing at import time in Next.js edge cases; routes will guard and return 500 instead.
@@ -24,7 +38,7 @@ export function verifyEntitlementsToken(token: string, expectedAud: string = "qu
 
   const payload = jwt.verify(token, ENTITLEMENTS_SECRET, {
     audience: expectedAud,
-    issuer: "pixelgrimoire-entitlements",
+    issuer: ENTITLEMENTS_ISSUER,
   });
 
   if (!payload || typeof payload !== "object") {
@@ -42,4 +56,3 @@ export function verifyEntitlementsToken(token: string, expectedAud: string = "qu
 export function hasEntitlement(payload: EntitlementsPayload, code: string): boolean {
   return Array.isArray(payload.entitlements) && payload.entitlements.includes(code);
 }
-
