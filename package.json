@@ -9,8 +9,10 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@gsap/react": "^2.1.2",
     "@reduxjs/toolkit": "^2.2.7",
     "csv-parse": "^5.6.0",
+    "gsap": "^3.12.5",
     "jsonwebtoken": "^9.0.2",
     "lucide-react": "^0.501.0",
     "mongoose": "^8.13.2",
