@@ -1,11 +1,11 @@
 "use client";
 
 import React, { useRef } from "react";
-import Image from "next/image";
 import Link from "next/link";
-import { Wallet, Ratio, Archive, Box } from "lucide-react";
+import { Wallet, Ratio, Archive } from "lucide-react";
 import { setupGSAP, gsap } from "@/lib/gsap";
 import { useGSAP } from "@gsap/react";
+import AnimatedCube from "@/components/AnimatedCube";
 
 export default function HomeIntro() {
   const scope = useRef<HTMLDivElement | null>(null);
@@ -54,7 +54,7 @@ export default function HomeIntro() {
         <div className="hero-logo relative w-36 h-36 sm:w-40 sm:h-40 mb-4 sm:mb-6">
           <div className="absolute inset-0 rounded-full bg-sky-100/70 blur-2xl" />
           <div className="relative mx-auto w-36 h-36 sm:w-40 sm:h-40 rounded-full ring-8 ring-white shadow-[0_12px_40px_-12px_rgba(2,132,199,0.45)] grid place-items-center overflow-hidden bg-white">
-            <Box className="h-8 w-8 text-sky-400" />
+            <AnimatedCube size={128} />
           </div>
         </div>
 
@@ -120,4 +120,3 @@ export default function HomeIntro() {
     </div>
   );
 }
-
