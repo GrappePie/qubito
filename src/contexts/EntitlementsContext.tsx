@@ -2,6 +2,10 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from "react";
 import { getEntitlements } from "@/lib/entitlementsClient";
 
+const DEBUG_ENTITLEMENTS =
+  process.env.NEXT_PUBLIC_DEBUG_ENTITLEMENTS === "1" ||
+  process.env.NEXT_PUBLIC_DEBUG_ENTITLEMENTS === "true";
+
 export type VerifiedEntitlements = {
   ok: boolean;
   sub: string;
@@ -30,14 +34,22 @@ export function EntitlementsProvider({ children }: { children: React.ReactNode }
   const [forbidden, setForbidden] = useState(false);
 
   const refresh = useCallback(async () => {
+    if (DEBUG_ENTITLEMENTS) console.log("[EntitlementsContext] refresh() starting");
     setLoading(true);
     setError(null);
     setForbidden(false);
     try {
       const res = await getEntitlements("pos.basic");
       setData(res);
+      if (DEBUG_ENTITLEMENTS)
+        console.log("[EntitlementsContext] refresh() success", {
+          sub: res.sub,
+          customerId: res.customerId,
+          entitlements: res.entitlements,
+        });
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : String(e);
+      if (DEBUG_ENTITLEMENTS) console.error("[EntitlementsContext] refresh() error", msg);
       // Handle known markers from getEntitlements
       if (msg === "unauthenticated") {
         const base = process.env.NEXT_PUBLIC_ENTITLEMENTS_BASE_URL || process.env.ENTITLEMENTS_BASE_URL || "";
@@ -45,6 +57,7 @@ export function EntitlementsProvider({ children }: { children: React.ReactNode }
         if (base) {
           const loginUrl = `${base.replace(/\/$/, "")}/sign-in?redirect=${encodeURIComponent(current)}`;
           // Redirect to landing login.
+          if (DEBUG_ENTITLEMENTS) console.log("[EntitlementsContext] redirecting to login:", loginUrl);
           window.location.replace(loginUrl);
           return;
         }
@@ -56,6 +69,7 @@ export function EntitlementsProvider({ children }: { children: React.ReactNode }
         setError(msg);
       }
     } finally {
+      if (DEBUG_ENTITLEMENTS) console.log("[EntitlementsContext] refresh() finished");
       setLoading(false);
     }
   }, []);

@@ -1,5 +1,6 @@
 "use client";
 import React, { useEffect, useState } from "react";
+import Image from "next/image";
 import { Search, Plus, Minus, X, ShoppingCart } from "lucide-react";
 
 // Definimos la interfaz para los productos tal como se usa en tu inventario.
@@ -161,11 +162,14 @@ export default function SalesPage() {
                             className="border rounded-lg p-2 text-center cursor-pointer hover:shadow-lg transition-shadow group"
                             onClick={() => addToCart(product)}
                         >
-                            <img
+                            <Image
                                 src={product.imageUrl}
                                 alt={product.name}
+                                width={300}
+                                height={96}
                                 className="w-full h-24 object-cover rounded-md mx-auto"
                                 onError={(e) => (e.currentTarget.src = 'https://placehold.co/150x150/e2e8f0/475569?text=Error')}
+                                unoptimized
                             />
                             <p className="text-sm font-semibold mt-2 truncate group-hover:text-sky-600">{product.name}</p>
                             <p className="text-xs text-slate-500">${product.price.toFixed(2)}</p>
@@ -186,7 +190,7 @@ export default function SalesPage() {
                         <div className="space-y-3">
                             {cart.map(item => (
                                 <div key={item._id} className="bg-white p-3 rounded-lg flex items-center shadow-sm">
-                                    <img src={item.imageUrl} alt={item.name} className="w-12 h-12 object-cover rounded-md mr-4"/>
+                                    <Image src={item.imageUrl} alt={item.name} width={48} height={48} className="w-12 h-12 object-cover rounded-md mr-4" unoptimized />
                                     <div className="flex-1">
                                         <p className="font-semibold text-slate-800 text-sm">{item.name}</p>
                                         <div className="flex items-center mt-1">
