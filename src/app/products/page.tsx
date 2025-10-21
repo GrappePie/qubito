@@ -143,19 +143,6 @@ export default function ProductsPage() {
         e.preventDefault();
         if (!currentProduct) return;
 
-        // Validación: todas las categorías seleccionadas deben ser válidas
-        const allowed = new Set(categoryOptions.map((c) => c.trim().toLowerCase()));
-        const chosen = (currentProduct.categories || []).map((c) => c.trim().toLowerCase()).filter(Boolean);
-        if (chosen.length === 0) {
-            toast.error('Selecciona al menos una categoría');
-            return;
-        }
-        const allValid = chosen.every((k) => allowed.has(k));
-        if (!allValid) {
-            toast.error('Alguna categoría no es válida. Agrega primero con el botón o selecciona de la lista');
-            return;
-        }
-
         const payload: UpsertProductPayload = {
             ...currentProduct,
             barCode: currentProduct.barCode ?? currentProduct.sku ?? '',

@@ -20,6 +20,7 @@ export interface OrderDoc {
   tax: number;
   total: number;
   customerName?: string;
+  tenantId?: string;
 }
 
 const OrderSchema = new mongoose.Schema<OrderDoc>(
@@ -43,6 +44,7 @@ const OrderSchema = new mongoose.Schema<OrderDoc>(
     tax: { type: Number, required: true },
     total: { type: Number, required: true },
     customerName: { type: String },
+    tenantId: { type: String, index: true },
   },
   { timestamps: true },
 );

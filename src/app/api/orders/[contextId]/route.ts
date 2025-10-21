@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/mongodb";
 import OrderModel, { OrderItem } from "@/models/Order";
+import { getTenantIdFromRequest } from "@/lib/tenant";
 
 function normalizeMode(value: unknown): "table" | "quick" {
   return value === "table" ? "table" : "quick";
@@ -44,11 +45,12 @@ function normalizeItems(raw: unknown): OrderItem[] {
   return items;
 }
 
-export async function GET(_req: NextRequest, { params }: { params: Promise<{ contextId: string }> }) {
+export async function GET(req: NextRequest, { params }: { params: Promise<{ contextId: string }> }) {
   try {
     await connectToDatabase();
     const { contextId } = await params;
-    const order = await OrderModel.findOne({ contextId, status: "pending" }).lean();
+    const tenant = getTenantIdFromRequest(req);
+    const order = await OrderModel.findOne({ contextId, status: "pending", tenantId: tenant }).lean();
     return NextResponse.json(order ?? null);
   } catch (error) {
     console.error("GET /api/orders/[contextId]", error);
@@ -61,6 +63,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ cont
     await connectToDatabase();
     const { contextId } = await params;
     const body = await req.json();
+    const tenant = getTenantIdFromRequest(req);
 
     const items = normalizeItems(body?.items);
     if (items.length === 0) {
@@ -90,8 +93,8 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ cont
     };
 
     const updated = await OrderModel.findOneAndUpdate(
-      { contextId },
-      { $set: updatePayload },
+      { contextId, tenantId: tenant },
+      { $set: { ...updatePayload, tenantId: tenant } },
       { new: true, upsert: true, setDefaultsOnInsert: true },
     ).lean();
 
@@ -102,11 +105,12 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ cont
   }
 }
 
-export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ contextId: string }> }) {
+export async function DELETE(req: NextRequest, { params }: { params: Promise<{ contextId: string }> }) {
   try {
     await connectToDatabase();
     const { contextId } = await params;
-    await OrderModel.findOneAndDelete({ contextId });
+    const tenant = getTenantIdFromRequest(req);
+    await OrderModel.findOneAndDelete({ contextId, tenantId: tenant });
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error("DELETE /api/orders/[contextId]", error);

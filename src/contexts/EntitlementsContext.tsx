@@ -45,7 +45,7 @@ export function EntitlementsProvider({ children }: { children: React.ReactNode }
 
     if (isLocalBypass) {
       if (DEBUG_ENTITLEMENTS) console.log("[EntitlementsContext] bypassing entitlements on localhost");
-      setData({
+      const local = {
         ok: true,
         sub: "local-dev",
         customerId: null,
@@ -54,12 +54,29 @@ export function EntitlementsProvider({ children }: { children: React.ReactNode }
         exp: null,
         iss: "localhost",
         aud: "qubito",
-      });
+      } as const;
+      // Persist tenant hints for API calls
+      try {
+        if (typeof window !== 'undefined') {
+          const tenant = local.customerId ?? local.sub;
+          window.localStorage.setItem('qubito_tenant', tenant);
+          window.localStorage.setItem('qubito_sub', local.sub);
+        }
+      } catch {}
+      setData(local);
       setLoading(false);
       return;
     }
     try {
       const res = await getEntitlements("pos.basic");
+      // Persist tenant hints for API calls
+      try {
+        if (typeof window !== 'undefined') {
+          const tenant = (res.customerId ?? res.sub) as string;
+          window.localStorage.setItem('qubito_tenant', tenant);
+          window.localStorage.setItem('qubito_sub', res.sub);
+        }
+      } catch {}
       setData(res);
       if (DEBUG_ENTITLEMENTS)
         console.log("[EntitlementsContext] refresh() success", {
