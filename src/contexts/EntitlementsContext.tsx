@@ -45,7 +45,7 @@ export function EntitlementsProvider({ children }: { children: React.ReactNode }
 
     if (isLocalBypass) {
       if (DEBUG_ENTITLEMENTS) console.log("[EntitlementsContext] bypassing entitlements on localhost");
-      const local = {
+      const local: VerifiedEntitlements = {
         ok: true,
         sub: "local-dev",
         customerId: null,
@@ -54,7 +54,7 @@ export function EntitlementsProvider({ children }: { children: React.ReactNode }
         exp: null,
         iss: "localhost",
         aud: "qubito",
-      } as const;
+      };
       // Persist tenant hints for API calls
       try {
         if (typeof window !== 'undefined') {
