@@ -21,7 +21,18 @@ export interface AdjustmentEntry {
 
 export const inventoryApi = createApi({
   reducerPath: 'inventoryApi',
-  baseQuery: fetchBaseQuery({ baseUrl: '/api' }),
+  baseQuery: fetchBaseQuery({
+    baseUrl: '/api',
+    prepareHeaders: (headers) => {
+      if (typeof window !== 'undefined') {
+        const t = window.localStorage.getItem('qubito_tenant');
+        const sub = window.localStorage.getItem('qubito_sub');
+        if (t) headers.set('x-tenant-id', t);
+        if (sub) headers.set('x-user-sub', sub);
+      }
+      return headers;
+    },
+  }),
   tagTypes: ['Inventory', 'History'],
   endpoints: (builder) => ({
     getInventoryList: builder.query<InventoryListItem[], void>({

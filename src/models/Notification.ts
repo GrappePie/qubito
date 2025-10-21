@@ -15,6 +15,7 @@ const NotificationSchema = new Schema({
         required: true,
         default: 'email',
     },
+    tenantId: { type: String, index: true },
 });
 
 export const Notification = mongoose.models.Notification || mongoose.model('Notification', NotificationSchema);

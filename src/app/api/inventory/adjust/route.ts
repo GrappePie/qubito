@@ -1,19 +1,21 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { connectToDatabase } from '@/lib/mongodb';
-import { Product } from '@/models/Product';
+import ItemModel from '@/models/Item';
 import AdjustmentHistory from '@/models/AdjustmentHistory';
+import { getTenantIdFromRequest } from '@/lib/tenant';
 
 export async function POST(req: NextRequest) {
     try {
         await connectToDatabase();
         const { productId, newStock, reason } = await req.json();
+        const tenant = getTenantIdFromRequest(req);
 
         if (!productId || newStock === undefined || newStock < 0) {
             return NextResponse.json({ error: 'Faltan parámetros o son inválidos' }, { status: 400 });
         }
 
-        // Obtener el producto actual para registrar el stock anterior
-        const product = await Product.findById(productId);
+        // Obtener el producto (Item) actual del tenant para registrar el stock anterior
+        const product = await ItemModel.findOne({ _id: productId, owner: tenant });
         if (!product) {
             return NextResponse.json({ error: 'Producto no encontrado' }, { status: 404 });
         }
@@ -28,8 +30,8 @@ export async function POST(req: NextRequest) {
             date: new Date()
         });
 
-        const updatedProduct = await Product.findByIdAndUpdate(
-            productId,
+        const updatedProduct = await ItemModel.findOneAndUpdate(
+            { _id: productId, owner: tenant },
             { $set: { stock: newStock } },
             { new: true }
         );

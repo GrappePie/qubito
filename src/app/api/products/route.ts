@@ -1,6 +1,7 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { connectToDatabase } from '@/lib/mongodb';
 import ItemModel from '@/models/Item';
+import { getTenantIdFromRequest } from '@/lib/tenant';
 
 function normalizeCats(cats: unknown): string[] {
   const arr = Array.isArray(cats) ? cats : [];
@@ -18,10 +19,12 @@ function normalizeCats(cats: unknown): string[] {
 }
 
 // GET para obtener todos los productos
-export async function GET() {
+export async function GET(req: NextRequest) {
     try {
         await connectToDatabase();
-        const items = await ItemModel.find({});
+        // Scope by tenant owner
+        const tenant = getTenantIdFromRequest(req);
+        const items = await ItemModel.find({ owner: tenant });
         return NextResponse.json(items);
     } catch {
         return NextResponse.json({ error: 'Error al obtener los productos' }, { status: 500 });
@@ -29,17 +32,19 @@ export async function GET() {
 }
 
 // POST para crear un nuevo producto
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
     try {
         await connectToDatabase();
         const body = await req.json();
+        const tenant = getTenantIdFromRequest(req);
         type Incoming = { category?: unknown; categories?: unknown } & Record<string, unknown>;
         const { category, categories, ...rest } = (body ?? {}) as Incoming;
         const normalized = normalizeCats(categories);
         const categoryFallback = typeof category === 'string' && category.trim() ? [category.trim()] : [];
         const finalCats = normalized.length > 0 ? normalized : (categoryFallback.length ? categoryFallback : ['General']);
 
-        const itemData: Record<string, unknown> = { ...rest, categories: finalCats };
+        // Force owner to current tenant
+        const itemData: Record<string, unknown> = { ...rest, owner: tenant, categories: finalCats };
         const newItem = new ItemModel(itemData);
         await newItem.save();
         return NextResponse.json(newItem, { status: 201 });

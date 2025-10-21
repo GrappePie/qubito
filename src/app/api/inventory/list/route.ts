@@ -1,10 +1,13 @@
 import { NextResponse } from 'next/server';
 import { connectToDatabase } from '@/lib/mongodb';
-import { Product } from '@/models/Product';
+import ItemModel from '@/models/Item';
+import { NextRequest } from 'next/server';
+import { getTenantIdFromRequest } from '@/lib/tenant';
 
-export async function GET() {
+export async function GET(req: NextRequest) {
     await connectToDatabase();
-    const products = await Product.find().lean();
+    const tenant = getTenantIdFromRequest(req);
+    const products = await ItemModel.find({ owner: tenant }).lean();
     return NextResponse.json(products);
 }
 

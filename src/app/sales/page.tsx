@@ -34,7 +34,10 @@ export default function SalesPage() {
             try {
                 // Usamos una ruta similar a la de tu inventario, pero asumimos que necesitamos el precio.
                 // Adaptaremos esto si la API real es diferente.
-                const res = await fetch("/api/inventory/list");
+                const tenant = typeof window !== 'undefined' ? window.localStorage.getItem('qubito_tenant') : null;
+                const res = await fetch("/api/inventory/list", {
+                    headers: tenant ? { 'x-tenant-id': tenant } : undefined,
+                });
                 if (!res.ok) {
                     throw new Error("No se pudieron cargar los productos.");
                 }

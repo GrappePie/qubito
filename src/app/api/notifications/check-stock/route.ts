@@ -1,16 +1,19 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { connectToDatabase } from '@/lib/mongodb';
 import { Notification } from '@/models/Notification';
-import { Product } from '@/models/Product';
+import ItemModel from '@/models/Item';
+import { getTenantIdFromRequest } from '@/lib/tenant';
 
 const DEFAULT_LOW_STOCK_THRESHOLD = 5;
 
-export async function GET() {
+export async function GET(req: NextRequest) {
     await connectToDatabase();
+    const tenant = getTenantIdFromRequest(req);
 
-    const lowStockProducts = await Product.find({ $expr: { $lt: ["$quantity", { $ifNull: ["$minThreshold", DEFAULT_LOW_STOCK_THRESHOLD] }] } });
+    // Items with stock lower or equal than lowStock (or default threshold)
+    const lowStockProducts = await ItemModel.find({ owner: tenant, $expr: { $lte: ["$stock", { $ifNull: ["$lowStock", DEFAULT_LOW_STOCK_THRESHOLD] }] } });
 
-    const notifications = await Notification.find({ trigger: 'low_stock', enabled: true });
+    const notifications = await Notification.find({ tenantId: tenant, trigger: 'low_stock', enabled: true });
 
     const logs: string[] = [];
     for (const notif of notifications) {

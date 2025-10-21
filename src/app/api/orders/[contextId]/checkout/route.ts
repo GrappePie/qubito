@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/mongodb";
 import OrderModel, { OrderItem } from "@/models/Order";
 import TicketModel from "@/models/Ticket";
+import { getTenantIdFromRequest, getUserSubFromRequest } from "@/lib/tenant";
 
 function toNumber(value: unknown, fallback = 0): number {
   const num = typeof value === "string" ? Number(value) : value;
@@ -38,8 +39,10 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ con
     await connectToDatabase();
     const { contextId } = await params;
     const body = await req.json();
+    const tenant = getTenantIdFromRequest(req);
+    const sub = getUserSubFromRequest(req);
 
-    const existingOrder = await OrderModel.findOne({ contextId, status: "pending" });
+    const existingOrder = await OrderModel.findOne({ contextId, status: "pending", tenantId: tenant });
     if (!existingOrder && !Array.isArray(body?.items)) {
       return NextResponse.json({ error: "No encontramos una orden pendiente para finalizar" }, { status: 404 });
     }
@@ -77,6 +80,8 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ con
     const ticket = await TicketModel.create({
       orderContext: mode,
       tableNumber: mode === "table" ? tableNumber : undefined,
+      customerId: tenant,
+      createdBy: sub ?? undefined,
       customerName,
       subtotal,
       tax,
@@ -99,7 +104,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ con
       })),
     });
 
-    await OrderModel.findOneAndDelete({ contextId });
+    await OrderModel.findOneAndDelete({ contextId, tenantId: tenant });
 
     return NextResponse.json(ticket);
   } catch (error) {

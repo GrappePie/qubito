@@ -26,7 +26,18 @@ export type UpsertProductPayload = ProductDTO & { category?: string };
 
 export const productsApi = createApi({
   reducerPath: 'productsApi',
-  baseQuery: fetchBaseQuery({ baseUrl: '/api' }),
+  baseQuery: fetchBaseQuery({
+    baseUrl: '/api',
+    prepareHeaders: (headers) => {
+      if (typeof window !== 'undefined') {
+        const t = window.localStorage.getItem('qubito_tenant');
+        const sub = window.localStorage.getItem('qubito_sub');
+        if (t) headers.set('x-tenant-id', t);
+        if (sub) headers.set('x-user-sub', sub);
+      }
+      return headers;
+    },
+  }),
   tagTypes: ['Products', 'Product'],
   endpoints: (builder) => ({
     getProducts: builder.query<ProductDTO[], void>({
