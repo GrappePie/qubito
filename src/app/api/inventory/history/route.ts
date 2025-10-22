@@ -1,13 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { connectToDatabase } from '@/lib/mongodb';
 import AdjustmentHistory from '@/models/AdjustmentHistory';
+import { getTenantIdFromRequest } from '@/lib/tenant';
 
 export async function GET(req: NextRequest) {
     try {
         await connectToDatabase();
+        const tenant = getTenantIdFromRequest(req);
         const { searchParams } = new URL(req.url);
         const productId = searchParams.get('productId');
-        const filter = productId ? { productId } : {};
+        const filter: Record<string, unknown> = { tenantId: tenant };
+        if (productId) filter.productId = productId;
         const history = await AdjustmentHistory.find(filter).sort({ date: -1 }).lean();
         return NextResponse.json({ success: true, history });
     } catch (error) {
