@@ -45,10 +45,11 @@ export function EntitlementsProvider({ children }: { children: React.ReactNode }
 
     if (isLocalBypass) {
       if (DEBUG_ENTITLEMENTS) console.log("[EntitlementsContext] bypassing entitlements on localhost");
+      const defaultTenant = process.env.NEXT_PUBLIC_DEFAULT_TENANT || process.env.DEFAULT_TENANT_ID || null;
       const local: VerifiedEntitlements = {
         ok: true,
         sub: "local-dev",
-        customerId: null,
+        customerId: defaultTenant,
         entitlements: ["pos.basic"],
         iat: null,
         exp: null,

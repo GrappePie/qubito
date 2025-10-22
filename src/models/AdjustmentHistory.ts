@@ -6,6 +6,7 @@ export interface IAdjustmentHistory extends Document {
   newStock: number;
   reason?: string;
   date: Date;
+  tenantId: string;
 }
 
 const AdjustmentHistorySchema = new Schema<IAdjustmentHistory>({
@@ -14,6 +15,7 @@ const AdjustmentHistorySchema = new Schema<IAdjustmentHistory>({
   newStock: { type: Number, required: true },
   reason: { type: String },
   date: { type: Date, default: Date.now },
+  tenantId: { type: String, required: true, index: true },
 });
 
 export default models.AdjustmentHistory || model<IAdjustmentHistory>('AdjustmentHistory', AdjustmentHistorySchema);

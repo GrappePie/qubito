@@ -27,7 +27,8 @@ export async function POST(req: NextRequest) {
             previousStock,
             newStock,
             reason,
-            date: new Date()
+            date: new Date(),
+            tenantId: tenant,
         });
 
         const updatedProduct = await ItemModel.findOneAndUpdate(

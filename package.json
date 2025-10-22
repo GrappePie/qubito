@@ -6,7 +6,9 @@
     "dev": "next dev --turbopack",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "seed:products": "node scripts/seed-tenant-items.mjs --tenant",
+    "seed:categories": "node scripts/seed-tenant-categories.mjs --tenant"
   },
   "dependencies": {
     "@gsap/react": "^2.1.2",
