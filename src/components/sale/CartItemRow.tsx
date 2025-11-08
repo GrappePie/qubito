@@ -36,9 +36,10 @@ const CartItemRow = ({ id, title, price, quantity }: CartItemRowProps) => {
           <input
             type="number"
             value={quantity}
-            className="w-12 text-center mx-1 border rounded text-sm"
+            className="text-center px-0!"
             onChange={onChange}
             min={1}
+            readOnly={true}
             {...(typeof stock === 'number' ? { max: stock } : {})}
           />
           <button className="text-slate-500 hover:text-slate-800 px-2 disabled:opacity-40" onClick={inc} disabled={atMax}>+</button>
