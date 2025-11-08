@@ -33,7 +33,7 @@ const Product = ({ id, title, price, sku, image, stock }: ProductProps) => {
   return (
     <div
       onClick={outOfStock ? undefined : handleAdd}
-      className={`h-40 border rounded-lg p-2 text-center ${outOfStock ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer hover:shadow-md'} transition-shadow select-none`}
+      className={`h-44 border rounded-lg p-2 text-center ${outOfStock ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer hover:shadow-md'} transition-shadow select-none`}
       title={outOfStock ? 'Sin stock' : 'Agregar al carrito'}
     >
       <Image
