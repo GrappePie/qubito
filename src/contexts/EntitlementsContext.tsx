@@ -43,6 +43,36 @@ export function EntitlementsProvider({ children }: { children: React.ReactNode }
     setError(null);
     setForbidden(false);
 
+    // Try local session first
+    try {
+      const me = await fetch('/api/auth/me', { credentials: 'include' });
+      if (me.ok) {
+        const data = await me.json();
+        const tenant = data?.account?.tenantId as string | undefined;
+        const sub = data?.account?.userId as string | undefined;
+        const entitlements = ['pos.basic'];
+        const local: VerifiedEntitlements = {
+          ok: true,
+          sub: sub || 'local-session',
+          customerId: tenant || null,
+          entitlements,
+          iat: null,
+          exp: null,
+          iss: 'qubito',
+          aud: 'qubito',
+        };
+        try {
+          if (typeof window !== 'undefined') {
+            if (tenant) window.localStorage.setItem('qubito_tenant', tenant);
+            if (sub) window.localStorage.setItem('qubito_sub', sub);
+          }
+        } catch {}
+        setData(local);
+        setLoading(false);
+        return;
+      }
+    } catch {}
+
     if (isLocalBypass) {
       if (DEBUG_ENTITLEMENTS) console.log("[EntitlementsContext] bypassing entitlements on localhost");
       const defaultTenant = process.env.NEXT_PUBLIC_DEFAULT_TENANT || process.env.DEFAULT_TENANT_ID || null;
