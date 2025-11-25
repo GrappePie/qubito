@@ -5,6 +5,7 @@ import Navbar from "@/components/Navbar";
 import { Providers } from "@/store/Providers";
 import { Toaster } from 'react-hot-toast';
 import EntitlementsGate from "@/components/EntitlementsGate";
+import AccountGate from "@/components/AccountGate";
 
 const geistSans = Geist({
     variable: "--font-geist-sans",
@@ -33,11 +34,13 @@ export default function RootLayout({
         >
         <Providers>
             <EntitlementsGate>
-                <div className="flex min-h-0">
-                    <Navbar />
-                    <main className=" flex-1 h-screen p-4 overflow-x-hidden">{children}</main>
-                </div>
-                <Toaster position="top-right" />
+                <AccountGate>
+                    <div className="flex min-h-0">
+                        <Navbar />
+                        <main className=" flex-1 h-screen p-4 overflow-x-hidden">{children}</main>
+                    </div>
+                    <Toaster position="top-right" />
+                </AccountGate>
             </EntitlementsGate>
         </Providers>
         </body>
