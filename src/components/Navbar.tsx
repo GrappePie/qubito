@@ -21,8 +21,8 @@ import {
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { PropsWithChildren, MouseEvent, ComponentType } from 'react';
-import { useAppDispatch } from '../store/hooks';
-import { startQuickOrder } from '../store/slices/cartSlice';
+import { useAppDispatch } from '@/store/hooks';
+import { startQuickOrder } from '@/store/slices/cartSlice';
 import { useAccounts } from '@/contexts/AccountsContext';
 import { toast } from 'react-hot-toast';
 
@@ -100,7 +100,6 @@ export default function Navbar() {
     { href: '#', label: 'Proveedores', icon: Truck, perm: 'suppliers.manage' },
     { href: '/pos', label: 'Punto de Venta', icon: Store, perm: 'pos.use' },
     { href: '/notifications', label: 'Notifications', icon: Bell, perm: 'notifications.view' },
-    { href: '/test', label: 'Test' },
   ];
 
   return (
@@ -142,12 +141,6 @@ export default function Navbar() {
       </div>
       <hr className="border-slate-700 my-2" />
       <div className="mt-auto space-y-1">
-        <div className="text-center py-2">
-          <h6 className="mb-0">Admin</h6>
-          <Link href="#" className="text-sky-400 text-[12px]">
-            Admin
-          </Link>
-        </div>
         {!loading && hasPermission('settings.manage') && (
           <NavItem href="/settings" icon={Settings}>
             Settings
@@ -158,7 +151,7 @@ export default function Navbar() {
           className="w-full px-4 py-3 rounded-lg flex items-center gap-2 transition-colors text-slate-200 hover:bg-slate-700 hover:text-white"
         >
           <LogOut size={25} className="basis-1/6" />
-          <span className="truncate">Cerrar Sesion</span>
+          <span className="truncate">Cerrar Sesión</span>
         </button>
       </div>
     </aside>

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { connectToDatabase } from '@/lib/mongodb';
 import ItemModel from '@/models/Item';
 import { getTenantIdFromRequest } from '@/lib/tenant';
+import { requireAuth } from '@/lib/apiAuth';
 
 function normalizeCats(cats: unknown): string[] {
   const arr = Array.isArray(cats) ? cats : [];
@@ -22,8 +23,10 @@ function normalizeCats(cats: unknown): string[] {
 export async function GET(req: NextRequest) {
     try {
         await connectToDatabase();
+        const auth = await requireAuth(req);
+        if (!auth.ok) return auth.res;
         // Scope by tenant owner
-        const tenant = getTenantIdFromRequest(req);
+        const tenant = auth.ctx.account.tenantId || getTenantIdFromRequest(req);
         const items = await ItemModel.find({ owner: tenant });
         return NextResponse.json(items);
     } catch {
@@ -35,8 +38,10 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
     try {
         await connectToDatabase();
+        const auth = await requireAuth(req, 'products.manage');
+        if (!auth.ok) return auth.res;
         const body = await req.json();
-        const tenant = getTenantIdFromRequest(req);
+        const tenant = auth.ctx.account.tenantId || getTenantIdFromRequest(req);
         type Incoming = { category?: unknown; categories?: unknown } & Record<string, unknown>;
         const { category, categories, ...rest } = (body ?? {}) as Incoming;
         const normalized = normalizeCats(categories);

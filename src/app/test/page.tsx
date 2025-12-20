@@ -1,6 +1,9 @@
 "use client";
-import {Tabs} from "@/components/material-components/Tabs";
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { Tabs } from "@/components/material-components/Tabs";
 import CreateItem from "@/components/item/createItem";
+import { useAccounts } from "@/contexts/AccountsContext";
 
 const tabs = [
     {title: "Create Item", content: <CreateItem />},
@@ -9,6 +12,20 @@ const tabs = [
 ];
 
 const Test = () => {
+    const router = useRouter();
+    const { loading, hasPermission } = useAccounts();
+
+    useEffect(() => {
+        if (loading) return;
+        if (!hasPermission('settings.manage')) {
+            router.replace('/');
+        }
+    }, [loading, hasPermission, router]);
+
+    if (loading || !hasPermission('settings.manage')) {
+        return null;
+    }
+
     return (
         <div>
             <Tabs tabs={tabs}/>

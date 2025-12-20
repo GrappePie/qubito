@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 
 const PUBLIC_PATHS = ['/login', '/api/auth/login', '/api/auth/logout', '/api/auth/me', '/api/accounts/bootstrap'];
 
-export function middleware(req: NextRequest) {
+export function proxy(req: NextRequest) {
   const { pathname } = req.nextUrl;
 
   // Allow public assets and next internals

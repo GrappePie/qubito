@@ -3,12 +3,15 @@ import { connectToDatabase } from '@/lib/mongodb';
 import ItemModel from '@/models/Item';
 import AdjustmentHistory from '@/models/AdjustmentHistory';
 import { getTenantIdFromRequest } from '@/lib/tenant';
+import { requireAuth } from '@/lib/apiAuth';
 
 export async function POST(req: NextRequest) {
     try {
         await connectToDatabase();
+        const auth = await requireAuth(req, 'inventory.manage');
+        if (!auth.ok) return auth.res;
         const { productId, newStock, reason } = await req.json();
-        const tenant = getTenantIdFromRequest(req);
+        const tenant = auth.ctx.account.tenantId || getTenantIdFromRequest(req);
 
         if (!productId || newStock === undefined || newStock < 0) {
             return NextResponse.json({ error: 'Faltan parámetros o son inválidos' }, { status: 400 });
