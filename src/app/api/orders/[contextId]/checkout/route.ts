@@ -3,6 +3,7 @@ import { connectToDatabase } from "@/lib/mongodb";
 import OrderModel, { OrderItem } from "@/models/Order";
 import TicketModel from "@/models/Ticket";
 import { getTenantIdFromRequest, getUserSubFromRequest } from "@/lib/tenant";
+import { requireAuth } from "@/lib/apiAuth";
 
 function toNumber(value: unknown, fallback = 0): number {
   const num = typeof value === "string" ? Number(value) : value;
@@ -37,10 +38,12 @@ function sanitizeItems(raw: unknown, fallback: OrderItem[] = []): OrderItem[] {
 export async function POST(req: NextRequest, { params }: { params: Promise<{ contextId: string }> }) {
   try {
     await connectToDatabase();
+    const auth = await requireAuth(req);
+    if (!auth.ok) return auth.res;
     const { contextId } = await params;
     const body = await req.json();
-    const tenant = getTenantIdFromRequest(req);
-    const sub = getUserSubFromRequest(req);
+    const tenant = auth.ctx.account.tenantId || getTenantIdFromRequest(req);
+    const sub = auth.ctx.account.userId || getUserSubFromRequest(req);
 
     const existingOrder = await OrderModel.findOne({ contextId, status: "pending", tenantId: tenant });
     if (!existingOrder && !Array.isArray(body?.items)) {

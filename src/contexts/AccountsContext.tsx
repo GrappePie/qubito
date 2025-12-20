@@ -89,11 +89,6 @@ export function AccountsProvider({ children }: { children: React.ReactNode }) {
   }, [entitlementData]);
 
   const refresh = useCallback(async () => {
-    // Skip on login page
-    if (typeof window !== 'undefined' && window.location.pathname === '/login') {
-      setLoading(false);
-      return;
-    }
     setLoading(true);
     setError(null);
     // Prefer local session

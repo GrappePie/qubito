@@ -1,4 +1,5 @@
 import { NextRequest } from 'next/server';
+import { readSessionFromRequest } from './auth';
 
 const TENANT_ENV_KEYS = ['DEFAULT_TENANT_ID', 'ENTITLEMENTS_DEFAULT_TENANT', 'NEXT_PUBLIC_DEFAULT_TENANT'] as const;
 
@@ -19,6 +20,9 @@ function isTenantId(s: string) {
 }
 
 export function getTenantIdFromRequest(req: NextRequest): string {
+  const session = readSessionFromRequest(req);
+  if (session?.tenantId && isTenantId(session.tenantId)) return session.tenantId;
+
   const header = req.headers.get('x-tenant-id')?.trim();
   if (header && isTenantId(header)) return header;
 

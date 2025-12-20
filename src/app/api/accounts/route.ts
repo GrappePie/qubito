@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { connectToDatabase } from '@/lib/mongodb';
-import { getTenantIdFromRequest, getUserSubFromRequest } from '@/lib/tenant';
 import AccountModel from '@/models/Account';
 import RoleModel from '@/models/Role';
 import {
@@ -9,6 +8,7 @@ import {
   normalizePermissions,
 } from '@/lib/permissions';
 import { hashPassword } from '@/lib/auth';
+import { requireAuth } from '@/lib/apiAuth';
 import type { Role } from '@/models/Role';
 import type { Account } from '@/models/Account';
 import type { WithId } from '@/types/common';
@@ -61,14 +61,11 @@ function serializeAccount(doc: WithId<Account>, role?: RolePayload | null): Acco
 export async function GET(req: NextRequest) {
   try {
     await connectToDatabase();
-    const tenantId = getTenantIdFromRequest(req);
-    const userId = getUserSubFromRequest(req);
-    const requester = userId
-      ? await AccountModel.findOne({ tenantId, userId })
-      : null;
-    if (!requester || !requester.isAdmin) {
-      return NextResponse.json({ error: 'forbidden' }, { status: 403 });
-    }
+    const auth = await requireAuth(req);
+    if (!auth.ok) return auth.res;
+    const { account: requester } = auth.ctx;
+    const tenantId = requester.tenantId;
+    if (!requester.isAdmin) return NextResponse.json({ error: 'forbidden' }, { status: 403 });
 
     const rolesDocs = await RoleModel.find({ tenantId });
     const roles = rolesDocs.map(serializeRole);
@@ -99,14 +96,12 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     await connectToDatabase();
-    const tenantId = getTenantIdFromRequest(req);
-    const createdBy = getUserSubFromRequest(req);
-    const requester = createdBy
-      ? await AccountModel.findOne({ tenantId, userId: createdBy })
-      : null;
-    if (!requester || !requester.isAdmin) {
-      return NextResponse.json({ error: 'forbidden' }, { status: 403 });
-    }
+    const auth = await requireAuth(req);
+    if (!auth.ok) return auth.res;
+    const { account: requester } = auth.ctx;
+    const tenantId = requester.tenantId;
+    const createdBy = requester.userId;
+    if (!requester.isAdmin) return NextResponse.json({ error: 'forbidden' }, { status: 403 });
     const body = await req.json().catch(() => ({} as Record<string, unknown>));
 
     const rawUserId = typeof body?.userId === 'string' ? body.userId : '';

@@ -9,11 +9,6 @@ export default function AccountGate({ children }: { children: React.ReactNode })
   const [email, setEmail] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [localError, setLocalError] = useState<string | null>(null);
-  const isLoginPage = typeof window !== 'undefined' && window.location.pathname === '/login';
-
-  if (isLoginPage) {
-    return <>{children}</>;
-  }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

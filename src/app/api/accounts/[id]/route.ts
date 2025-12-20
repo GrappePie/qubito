@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { connectToDatabase } from '@/lib/mongodb';
-import { getTenantIdFromRequest, getUserSubFromRequest } from '@/lib/tenant';
 import AccountModel from '@/models/Account';
 import RoleModel from '@/models/Role';
 import { PermissionCode, normalizePermissions } from '@/lib/permissions';
 import { hashPassword } from '@/lib/auth';
+import { requireAuth } from '@/lib/apiAuth';
 import type { Role } from '@/models/Role';
 import type { Account } from '@/models/Account';
 import type { WithId } from '@/types/common';
@@ -48,14 +48,11 @@ export async function PATCH(
   try {
     await connectToDatabase();
     const { id } = await params;
-    const tenantId = getTenantIdFromRequest(req);
-    const userId = getUserSubFromRequest(req);
-    const requester = userId
-      ? await AccountModel.findOne({ tenantId, userId })
-      : null;
-    if (!requester || !requester.isAdmin) {
-      return NextResponse.json({ error: 'forbidden' }, { status: 403 });
-    }
+    const auth = await requireAuth(req);
+    if (!auth.ok) return auth.res;
+    const { account: requester } = auth.ctx;
+    const tenantId = requester.tenantId;
+    if (!requester.isAdmin) return NextResponse.json({ error: 'forbidden' }, { status: 403 });
     const body = await req.json().catch(() => ({} as Record<string, unknown>));
 
     const currentAccount = await AccountModel.findOne({ _id: id, tenantId });
@@ -95,7 +92,7 @@ export async function PATCH(
     const willRemoveAdmin =
       currentAccount.isAdmin &&
       targetRole &&
-      targetRole.isAdmin === false;
+      !targetRole.isAdmin;
     if (willRemoveAdmin) {
       const otherAdmins = await AccountModel.countDocuments({
         tenantId,
@@ -147,14 +144,11 @@ export async function DELETE(
   try {
     await connectToDatabase();
     const { id } = await params;
-    const tenantId = getTenantIdFromRequest(req);
-    const userId = getUserSubFromRequest(req);
-    const requester = userId
-      ? await AccountModel.findOne({ tenantId, userId })
-      : null;
-    if (!requester || !requester.isAdmin) {
-      return NextResponse.json({ error: 'forbidden' }, { status: 403 });
-    }
+    const auth = await requireAuth(req);
+    if (!auth.ok) return auth.res;
+    const { account: requester } = auth.ctx;
+    const tenantId = requester.tenantId;
+    if (!requester.isAdmin) return NextResponse.json({ error: 'forbidden' }, { status: 403 });
 
     const account = await AccountModel.findOne({ _id: id, tenantId });
     if (!account) {

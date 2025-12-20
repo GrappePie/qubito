@@ -2,11 +2,14 @@ import { NextRequest, NextResponse } from 'next/server';
 import { connectToDatabase } from '@/lib/mongodb';
 import AdjustmentHistory from '@/models/AdjustmentHistory';
 import { getTenantIdFromRequest } from '@/lib/tenant';
+import { requireAuth } from '@/lib/apiAuth';
 
 export async function GET(req: NextRequest) {
     try {
         await connectToDatabase();
-        const tenant = getTenantIdFromRequest(req);
+        const auth = await requireAuth(req, 'inventory.manage');
+        if (!auth.ok) return auth.res;
+        const tenant = auth.ctx.account.tenantId || getTenantIdFromRequest(req);
         const { searchParams } = new URL(req.url);
         const productId = searchParams.get('productId');
         const filter: Record<string, unknown> = { tenantId: tenant };
@@ -18,4 +21,3 @@ export async function GET(req: NextRequest) {
         return NextResponse.json({ error: 'Error interno del servidor' }, { status: 500 });
     }
 }
-

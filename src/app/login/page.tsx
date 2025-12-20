@@ -15,6 +15,7 @@ type BootstrapForm = {
   displayName: string;
   email: string;
   password: string;
+  confirmPassword: string;
 };
 
 export default function LoginPage() {
@@ -31,10 +32,14 @@ export default function LoginPage() {
     displayName: 'Administrador',
     email: '',
     password: '',
+    confirmPassword: '',
   });
+  const [tenantId, setTenantId] = useState('');
   const [checkingAdmin, setCheckingAdmin] = useState(false);
   const [hasAdmin, setHasAdmin] = useState<boolean | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [showLoginPassword, setShowLoginPassword] = useState(false);
+  const [showBootstrapPassword, setShowBootstrapPassword] = useState(false);
 
   const tenantFromEntitlements = useMemo(
     () => ent?.customerId || process.env.NEXT_PUBLIC_DEFAULT_TENANT || process.env.DEFAULT_TENANT_ID || '',
@@ -60,16 +65,28 @@ export default function LoginPage() {
   };
 
   useEffect(() => {
-    if (tenantFromEntitlements) checkAdmin(tenantFromEntitlements);
-  }, [tenantFromEntitlements]);
+    if (tenantFromEntitlements && !tenantId) {
+      setTenantId(tenantFromEntitlements);
+    }
+  }, [tenantFromEntitlements, tenantId]);
+
+  useEffect(() => {
+    if (!tenantId) return;
+    const timer = setTimeout(() => checkAdmin(tenantId), 300);
+    return () => clearTimeout(timer);
+  }, [tenantId]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!tenantId.trim()) {
+      toast.error('Ingresa el identificador de tenant');
+      return;
+    }
     setSubmitting(true);
     try {
       const res = await fetch('/api/auth/login', {
         method: 'POST',
-        headers: { 'content-type': 'application/json', 'x-tenant-id': tenantFromEntitlements },
+        headers: { 'content-type': 'application/json', 'x-tenant-id': tenantId.trim() },
         body: JSON.stringify(loginForm),
       });
       if (!res.ok) {
@@ -97,11 +114,23 @@ export default function LoginPage() {
 
   const handleBootstrap = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!tenantId.trim()) {
+      toast.error('Ingresa el identificador de tenant');
+      return;
+    }
+    if (bootForm.password.length < 8) {
+      toast.error('La contraseña debe tener al menos 8 caracteres');
+      return;
+    }
+    if (bootForm.password !== bootForm.confirmPassword) {
+      toast.error('La confirmación de contraseña no coincide');
+      return;
+    }
     setSubmitting(true);
     try {
       const res = await fetch('/api/accounts/bootstrap', {
         method: 'POST',
-        headers: { 'content-type': 'application/json', 'x-tenant-id': tenantFromEntitlements },
+        headers: { 'content-type': 'application/json', 'x-tenant-id': tenantId.trim() },
         body: JSON.stringify(bootForm),
       });
       if (!res.ok) {
@@ -179,6 +208,19 @@ export default function LoginPage() {
             <form className="space-y-3" onSubmit={handleLogin}>
               <div>
                 <label className="text-sm text-slate-700 flex items-center gap-1">
+                  Tenant / cliente
+                </label>
+                <input
+                  className="mt-1 w-full rounded-lg border px-3 py-2 focus:outline-none focus:ring-2 focus:ring-sky-500"
+                  value={tenantId}
+                  onChange={(e) => setTenantId(e.target.value)}
+                  placeholder="Ej. mi-tenant"
+                  required
+                />
+                <p className="text-xs text-slate-500 mt-1">Obligatorio para identificar tus datos.</p>
+              </div>
+              <div>
+                <label className="text-sm text-slate-700 flex items-center gap-1">
                   <User className="h-4 w-4" /> Usuario
                 </label>
                 <input
@@ -192,13 +234,22 @@ export default function LoginPage() {
                 <label className="text-sm text-slate-700 flex items-center gap-1">
                   <Lock className="h-4 w-4" /> Contraseña
                 </label>
-                <input
-                  type="password"
-                  className="mt-1 w-full rounded-lg border px-3 py-2 focus:outline-none focus:ring-2 focus:ring-sky-500"
-                  value={loginForm.password}
-                  onChange={(e) => setLoginForm((f) => ({ ...f, password: e.target.value }))}
-                  required
-                />
+                <div className="relative">
+                  <input
+                    type={showLoginPassword ? 'text' : 'password'}
+                    className="mt-1 w-full rounded-lg border px-3 py-2 pr-24 focus:outline-none focus:ring-2 focus:ring-sky-500"
+                    value={loginForm.password}
+                    onChange={(e) => setLoginForm((f) => ({ ...f, password: e.target.value }))}
+                    required
+                  />
+                  <button
+                    type="button"
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-sky-700 hover:underline"
+                    onClick={() => setShowLoginPassword((v) => !v)}
+                  >
+                    {showLoginPassword ? 'Ocultar' : 'Mostrar'}
+                  </button>
+                </div>
               </div>
               <button
                 type="submit"
@@ -217,6 +268,16 @@ export default function LoginPage() {
             </form>
           ) : (
             <form className="space-y-3" onSubmit={handleBootstrap}>
+              <div>
+                <label className="text-sm text-slate-700">Tenant / cliente</label>
+                <input
+                  className="mt-1 w-full rounded-lg border px-3 py-2 focus:outline-none focus:ring-2 focus:ring-sky-500"
+                  value={tenantId}
+                  onChange={(e) => setTenantId(e.target.value)}
+                  placeholder="Ej. mi-tenant"
+                  required
+                />
+              </div>
               <div>
                 <label className="text-sm text-slate-700">Usuario</label>
                 <input
@@ -246,14 +307,35 @@ export default function LoginPage() {
               </div>
               <div>
                 <label className="text-sm text-slate-700">Contraseña</label>
+                <div className="relative">
+                  <input
+                    type={showBootstrapPassword ? 'text' : 'password'}
+                    className="mt-1 w-full rounded-lg border px-3 py-2 pr-24 focus:outline-none focus:ring-2 focus:ring-sky-500"
+                    value={bootForm.password}
+                    onChange={(e) => setBootForm((f) => ({ ...f, password: e.target.value }))}
+                    required
+                    minLength={8}
+                  />
+                  <button
+                    type="button"
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-sky-700 hover:underline"
+                    onClick={() => setShowBootstrapPassword((v) => !v)}
+                  >
+                    {showBootstrapPassword ? 'Ocultar' : 'Mostrar'}
+                  </button>
+                </div>
+                <p className="text-xs text-slate-500 mt-1">Mínimo 8 caracteres. Usa letras y números.</p>
+              </div>
+              <div>
+                <label className="text-sm text-slate-700">Confirmar contraseña</label>
                 <input
-                  type="password"
+                  type={showBootstrapPassword ? 'text' : 'password'}
                   className="mt-1 w-full rounded-lg border px-3 py-2 focus:outline-none focus:ring-2 focus:ring-sky-500"
-                  value={bootForm.password}
-                  onChange={(e) => setBootForm((f) => ({ ...f, password: e.target.value }))}
+                  value={bootForm.confirmPassword}
+                  onChange={(e) => setBootForm((f) => ({ ...f, confirmPassword: e.target.value }))}
                   required
+                  minLength={8}
                 />
-                <p className="text-xs text-slate-500 mt-1">Mínimo 8 caracteres.</p>
               </div>
               <button
                 type="submit"
