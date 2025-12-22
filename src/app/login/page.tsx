@@ -21,8 +21,7 @@ type BootstrapForm = {
 export default function LoginPage() {
   const router = useRouter();
   const search = useSearchParams();
-  const { data: ent, forbidden } = useEntitlements();
-  const [mode, setMode] = useState<'login' | 'bootstrap'>('login');
+  const { data: ent, forbidden, refresh: refreshEntitlements } = useEntitlements();
   const [loginForm, setLoginForm] = useState<LoginForm>({
     userId: '',
     password: '',
@@ -34,7 +33,6 @@ export default function LoginPage() {
     password: '',
     confirmPassword: '',
   });
-  const [tenantId, setTenantId] = useState('');
   const [checkingAdmin, setCheckingAdmin] = useState(false);
   const [hasAdmin, setHasAdmin] = useState<boolean | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -45,6 +43,7 @@ export default function LoginPage() {
     () => ent?.customerId || process.env.NEXT_PUBLIC_DEFAULT_TENANT || process.env.DEFAULT_TENANT_ID || '',
     [ent?.customerId]
   );
+  const tenantId = tenantFromEntitlements;
 
   const checkAdmin = async (tenantId: string) => {
     if (!tenantId) return;
@@ -65,21 +64,15 @@ export default function LoginPage() {
   };
 
   useEffect(() => {
-    if (tenantFromEntitlements && !tenantId) {
-      setTenantId(tenantFromEntitlements);
-    }
-  }, [tenantFromEntitlements, tenantId]);
-
-  useEffect(() => {
-    if (!tenantId) return;
-    const timer = setTimeout(() => checkAdmin(tenantId), 300);
+    if (!tenantFromEntitlements) return;
+    const timer = setTimeout(() => checkAdmin(tenantFromEntitlements), 200);
     return () => clearTimeout(timer);
-  }, [tenantId]);
+  }, [tenantFromEntitlements]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!tenantId.trim()) {
-      toast.error('Ingresa el identificador de tenant');
+      toast.error('No se pudo obtener tu tenant, recarga e intenta de nuevo.');
       return;
     }
     setSubmitting(true);
@@ -101,6 +94,8 @@ export default function LoginPage() {
         window.localStorage.setItem('qubito_tenant', acc.tenantId);
         window.localStorage.setItem('qubito_sub', acc.userId);
       }
+      // Refresca entitlements/contexto para que Navbar y permisos carguen sin recargar página
+      await refreshEntitlements().catch(() => {});
       toast.success('Sesión iniciada');
       const next = search?.get('next');
       router.replace(next || '/');
@@ -115,7 +110,7 @@ export default function LoginPage() {
   const handleBootstrap = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!tenantId.trim()) {
-      toast.error('Ingresa el identificador de tenant');
+      toast.error('No se pudo obtener tu tenant, recarga e intenta de nuevo.');
       return;
     }
     if (bootForm.password.length < 8) {
@@ -153,6 +148,8 @@ export default function LoginPage() {
     }
   };
 
+  const showBootstrap = hasAdmin === false;
+
   return (
     <div className="min-h-screen flex items-center justify-center bg-slate-50 p-4">
       <div className="bg-white border border-slate-200 rounded-2xl shadow-lg w-full max-w-2xl grid md:grid-cols-2 overflow-hidden">
@@ -163,12 +160,6 @@ export default function LoginPage() {
               <p className="text-sm uppercase tracking-wide">Qubito Access</p>
             </div>
             <h2 className="text-2xl font-bold mt-2">Accede a tu cuenta interna</h2>
-            <p className="text-sm text-slate-300 mt-2">
-              Inicia sesión con tu tenant y usuario. Si es la primera vez, crea el administrador.
-            </p>
-          </div>
-          <div className="mt-6 text-xs text-slate-400">
-            Ten en mano el identificador de tu tenant para asociar usuarios internos.
           </div>
         </div>
 
@@ -176,18 +167,12 @@ export default function LoginPage() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-lg font-semibold text-slate-800">
-                {mode === 'login' ? 'Iniciar sesión' : 'Crear administrador'}
+                {showBootstrap ? 'Crear administrador' : 'Iniciar sesión'}
               </p>
               <p className="text-sm text-slate-500">
-                {mode === 'login' ? 'Accede a tu tenant interno' : 'Primer admin con contraseña'}
+                {showBootstrap ? 'Primer admin con contraseña' : 'Accede a tu tenant interno'}
               </p>
             </div>
-            <button
-              className="text-sm text-sky-600 hover:underline"
-              onClick={() => setMode((m) => (m === 'login' ? 'bootstrap' : 'login'))}
-            >
-              {mode === 'login' ? 'Crear admin' : 'Ya tengo cuenta'}
-            </button>
           </div>
 
           {forbidden && (
@@ -204,21 +189,8 @@ export default function LoginPage() {
             </div>
           )}
 
-          {mode === 'login' ? (
+          {!showBootstrap ? (
             <form className="space-y-3" onSubmit={handleLogin}>
-              <div>
-                <label className="text-sm text-slate-700 flex items-center gap-1">
-                  Tenant / cliente
-                </label>
-                <input
-                  className="mt-1 w-full rounded-lg border px-3 py-2 focus:outline-none focus:ring-2 focus:ring-sky-500"
-                  value={tenantId}
-                  onChange={(e) => setTenantId(e.target.value)}
-                  placeholder="Ej. mi-tenant"
-                  required
-                />
-                <p className="text-xs text-slate-500 mt-1">Obligatorio para identificar tus datos.</p>
-              </div>
               <div>
                 <label className="text-sm text-slate-700 flex items-center gap-1">
                   <User className="h-4 w-4" /> Usuario
@@ -259,25 +231,10 @@ export default function LoginPage() {
                 <LogIn className="h-4 w-4" />
                 Entrar
               </button>
-              {hasAdmin === false && (
-                <p className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg p-2">
-                  No existe administrador para este tenant. Cambia a “Crear admin” para dar de alta el primero.
-                </p>
-              )}
               {checkingAdmin && <p className="text-xs text-slate-500">Revisando tenant...</p>}
             </form>
           ) : (
             <form className="space-y-3" onSubmit={handleBootstrap}>
-              <div>
-                <label className="text-sm text-slate-700">Tenant / cliente</label>
-                <input
-                  className="mt-1 w-full rounded-lg border px-3 py-2 focus:outline-none focus:ring-2 focus:ring-sky-500"
-                  value={tenantId}
-                  onChange={(e) => setTenantId(e.target.value)}
-                  placeholder="Ej. mi-tenant"
-                  required
-                />
-              </div>
               <div>
                 <label className="text-sm text-slate-700">Usuario</label>
                 <input
