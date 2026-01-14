@@ -40,6 +40,7 @@ export async function POST(req: NextRequest) {
             isAvailableForSale: true,
             variants: Array.isArray(body?.variants) ? body.variants : [],
         });
+        // TODO: send email/push notifications for new product creation.
         return NextResponse.json(doc, { status: 201 });
     } catch (e) {
         console.error('POST /api/inventory/add error', e);

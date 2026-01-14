@@ -7,9 +7,16 @@ import { useRouter } from "next/navigation";
 import { toast } from "react-hot-toast";
 import CheckoutDialog from "@/components/sale/CheckoutDialog";
 import { useCheckoutOrderMutation, useDeleteOrderMutation, useSaveOrderMutation } from "@/store/slices/ordersApi";
+import { useGetCashRegisterStatusQuery } from "@/store/slices/cashRegisterApi";
 import type { CheckoutSummary } from "@/types/checkout";
 
 const TAX_RATE = 0.16;
+
+const isCashClosedError = (error: unknown) => {
+    if (!error || typeof error !== "object") return false;
+    const maybe = error as { data?: { error?: string } };
+    return maybe?.data?.error === "cash_closed";
+};
 
 const SideSummarySale = () => {
     const dispatch = useAppDispatch();
@@ -23,6 +30,7 @@ const SideSummarySale = () => {
     const [saveOrder, { isLoading: isSaving }] = useSaveOrderMutation();
     const [checkoutOrder, { isLoading: isFinalizing }] = useCheckoutOrderMutation();
     const [deleteOrder, { isLoading: isDeleting }] = useDeleteOrderMutation();
+    const { data: cashStatus, isLoading: cashLoading } = useGetCashRegisterStatusQuery();
 
     const contextId = isQuick ? "quick" : activeTableId != null ? `mesa-${activeTableId}` : null;
     const mode = isQuick ? "quick" : "table";
@@ -46,6 +54,7 @@ const SideSummarySale = () => {
     const tax = Number((total - netSubtotal).toFixed(2));
     const orderLabel = isQuick ? "Orden Rápida" : `Mesa #${activeTableId}`;
     const totalItems = useMemo(() => items.reduce((acc, item) => acc + item.quantity, 0), [items]);
+    const canCheckout = Boolean(cashStatus?.open) && !cashLoading;
 
     const handleClear = async () => {
         if (items.length === 0) return;
@@ -86,11 +95,19 @@ const SideSummarySale = () => {
             }
         } catch (error) {
             console.error("save order", error);
+            if (isCashClosedError(error)) {
+                toast.error("Caja cerrada. Abre la caja para vender.");
+                return;
+            }
             toast.error("No pudimos guardar la orden");
         }
     };
 
     const handlePaymentComplete = async (summary: CheckoutSummary) => {
+        if (!canCheckout) {
+            toast.error("Caja cerrada. Abre la caja para cobrar.");
+            throw new Error("cash-closed");
+        }
         if (items.length === 0) {
             toast.error("No hay productos en la orden");
             throw new Error("empty-order");
@@ -119,6 +136,10 @@ const SideSummarySale = () => {
             }
         } catch (error) {
             console.error("checkout order", error);
+            if (isCashClosedError(error)) {
+                toast.error("Caja cerrada. Abre la caja para vender.");
+                throw error instanceof Error ? error : new Error("cash-closed");
+            }
             toast.error("No pudimos finalizar la venta");
             throw error instanceof Error ? error : new Error("checkout-failed");
         }
@@ -179,9 +200,15 @@ const SideSummarySale = () => {
                     onClick={() => setPaymentOpen(true)}
                     className="w-full bg-sky-500 text-white font-bold py-3 rounded-lg hover:bg-sky-600 transition-colors text-lg disabled:bg-slate-400"
                     id="checkout-button"
-                    disabled={items.length === 0 || isFinalizing}
+                    disabled={items.length === 0 || isFinalizing || !canCheckout}
                 >
-                    {isFinalizing ? "Procesando..." : "Proceder al Pago"}
+                    {cashLoading
+                        ? "Verificando caja..."
+                        : isFinalizing
+                          ? "Procesando..."
+                          : canCheckout
+                            ? "Proceder al Pago"
+                            : "Caja cerrada"}
                 </button>
             </div>
             <CheckoutDialog
@@ -189,6 +216,8 @@ const SideSummarySale = () => {
                 subtotal={netSubtotal}
                 tax={tax}
                 total={total}
+                cashOpen={cashStatus?.open}
+                cashStatusLoading={cashLoading}
                 onClose={() => setPaymentOpen(false)}
                 onComplete={handlePaymentComplete}
             />

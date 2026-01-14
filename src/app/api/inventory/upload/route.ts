@@ -81,6 +81,7 @@ export async function POST(req: NextRequest) {
             );
         }
 
+        // TODO: send email/push notifications for new products and low stock after bulk import.
         return NextResponse.json({ status: 'ok', processed: rows.length });
     } catch (e) {
         console.error('POST /api/inventory/upload error', e);

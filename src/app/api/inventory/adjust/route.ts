@@ -44,6 +44,7 @@ export async function POST(req: NextRequest) {
             return NextResponse.json({ error: 'Producto no encontrado' }, { status: 404 });
         }
 
+        // TODO: send email/push notifications when adjustments cause low/out-of-stock thresholds.
         return NextResponse.json({ success: true, product: updatedProduct });
     } catch (error) {
         console.error('Error al ajustar el inventario:', error);
