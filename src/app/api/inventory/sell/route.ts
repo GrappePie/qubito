@@ -53,6 +53,7 @@ export async function POST(req: NextRequest) {
         }
 
         await ItemModel.bulkSave(toSave);
+        // TODO: send email/push notifications when items hit low/out-of-stock after a sale.
         return NextResponse.json({ success: true, updates });
     } catch (e) {
         console.error('POST /api/inventory/sell error', e);

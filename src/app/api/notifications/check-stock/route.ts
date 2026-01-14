@@ -14,6 +14,7 @@ export async function GET(req: NextRequest) {
     const lowStockProducts = await ItemModel.find({ owner: tenant, $expr: { $lte: ["$stock", { $ifNull: ["$lowStock", DEFAULT_LOW_STOCK_THRESHOLD] }] } }).lean();
 
     const notifications = await Notification.find({ tenantId: tenant, trigger: 'low_stock', enabled: true });
+    // TODO: send email/push notifications and expand to other triggers (out_of_stock, new_product).
 
     const logs: string[] = [];
     for (const notif of notifications) {

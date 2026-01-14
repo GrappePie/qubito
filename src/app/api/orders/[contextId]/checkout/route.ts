@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/mongodb";
 import OrderModel, { OrderItem } from "@/models/Order";
 import TicketModel from "@/models/Ticket";
+import CashRegisterSession from "@/models/CashRegisterSession";
 import { getTenantIdFromRequest, getUserSubFromRequest } from "@/lib/tenant";
 import { requireAuth } from "@/lib/apiAuth";
 
@@ -45,6 +46,18 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ con
     const tenant = auth.ctx.account.tenantId || getTenantIdFromRequest(req);
     const sub = auth.ctx.account.userId || getUserSubFromRequest(req);
 
+    const openSession = await CashRegisterSession.findOne({
+      tenantId: tenant,
+      status: "open",
+    }).lean();
+    if (!openSession) {
+      return NextResponse.json({ error: "cash_closed" }, { status: 409 });
+    }
+    const sessionDoc = Array.isArray(openSession) ? openSession[0] : openSession;
+    if (!sessionDoc) {
+      return NextResponse.json({ error: "cash_closed" }, { status: 409 });
+    }
+
     const existingOrder = await OrderModel.findOne({ contextId, status: "pending", tenantId: tenant });
     if (!existingOrder && !Array.isArray(body?.items)) {
       return NextResponse.json({ error: "No encontramos una orden pendiente para finalizar" }, { status: 404 });
@@ -85,6 +98,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ con
       tableNumber: mode === "table" ? tableNumber : undefined,
       customerId: tenant,
       createdBy: sub ?? undefined,
+      cashSessionId: sessionDoc._id?.toString?.() ?? String(sessionDoc._id),
       customerName,
       subtotal,
       tax,

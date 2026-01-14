@@ -1,7 +1,6 @@
 "use client";
 
 import {
-  History,
   Store,
   Landmark,
   LayoutDashboard,
@@ -23,6 +22,7 @@ import { usePathname } from 'next/navigation';
 import { PropsWithChildren, MouseEvent, ComponentType } from 'react';
 import { useAppDispatch } from '@/store/hooks';
 import { startQuickOrder } from '@/store/slices/cartSlice';
+import { useGetCashRegisterStatusQuery } from '@/store/slices/cashRegisterApi';
 import { useAccounts } from '@/contexts/AccountsContext';
 import { toast } from 'react-hot-toast';
 
@@ -71,6 +71,8 @@ function NavItem({
 export default function Navbar() {
   const dispatch = useAppDispatch();
   const { hasPermission, loading } = useAccounts();
+  const { data: cashStatus, isLoading: cashLoading, error: cashError } =
+    useGetCashRegisterStatusQuery();
   const handleLogout = async () => {
     try {
       await fetch('/api/auth/logout', { method: 'POST' });
@@ -87,8 +89,8 @@ export default function Navbar() {
   const navTop: NavEntry[] = [
     { href: '/tables', label: 'Mesas', icon: Ratio, perm: 'tables.manage' },
     { href: '/sale', label: 'Venta Rapida', icon: Wallet, perm: 'pos.use', onClick: () => dispatch(startQuickOrder()) },
-    { href: '#', label: 'Corte de Caja', icon: Landmark, perm: 'cash.close' },
-    { href: '#', label: 'Historial de ventas', icon: History, perm: 'sales.history' },
+    { href: '/cash-close', label: 'Corte de Caja', icon: Landmark, perm: 'cash.close' },
+    // TODO: add "Detalle de ventas" (ticket search/reprints) when needed.
   ];
   const navMid: NavEntry[] = [
     { href: '#', label: 'Dashboard', icon: LayoutDashboard, perm: 'dashboard.view' },
@@ -102,11 +104,29 @@ export default function Navbar() {
     { href: '/notifications', label: 'Notifications', icon: Bell, perm: 'notifications.view' },
   ];
 
+  const cashLabel = cashError
+    ? "Caja: sin datos"
+    : cashLoading
+      ? "Caja: verificando"
+      : cashStatus?.open
+        ? "Caja abierta"
+        : "Caja cerrada";
+  const cashClass = cashError || cashLoading
+    ? "bg-slate-700 text-slate-200"
+    : cashStatus?.open
+      ? "bg-emerald-600/20 text-emerald-200"
+      : "bg-rose-600/20 text-rose-200";
+
   return (
     <aside className="w-64 bg-slate-800 text-white h-screen p-4 flex flex-col">
       <div className="text-xl font-semibold mb-6 flex items-center border-b border-slate-700 pb-2 h-11 shrink-0">
         <Box className="h-8 w-8 text-sky-400" />
         <span className="ml-3 text-2xl font-bold">Qubito POS</span>
+      </div>
+      <div className="mb-4">
+        <div className={`inline-flex items-center rounded-full px-3 py-1 text-xs font-semibold ${cashClass}`}>
+          {cashLabel}
+        </div>
       </div>
       <div className="max-h-1/3 pt-1 overflow-y-auto space-y-1">
         {!loading &&
