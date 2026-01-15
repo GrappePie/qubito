@@ -35,7 +35,7 @@ type AccountsState = {
   availablePermissions: PermissionDef[];
   error: string | null;
   refresh: () => Promise<void>;
-  bootstrapAdmin: (payload: { displayName?: string; email?: string }) => Promise<void>;
+  bootstrapAdmin: (payload: { displayName?: string; email?: string; password?: string }) => Promise<void>;
   hasPermission: (code: PermissionCode | string) => boolean;
   hasAnyPermission: (codes: Array<PermissionCode | string>) => boolean;
 };
@@ -144,7 +144,7 @@ export function AccountsProvider({ children }: { children: React.ReactNode }) {
   }, [buildHeaders, entError, entitlementData]);
 
   const bootstrapAdmin = useCallback(
-    async (payload: { displayName?: string; email?: string }) => {
+    async (payload: { displayName?: string; email?: string; password?: string }) => {
       if (!entitlementData) throw new Error('missing_entitlements');
       setError(null);
       const res = await fetch('/api/accounts/bootstrap', {
