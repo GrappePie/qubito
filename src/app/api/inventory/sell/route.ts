@@ -2,11 +2,14 @@ import { NextRequest, NextResponse } from 'next/server';
 import { connectToDatabase } from '@/lib/mongodb';
 import ItemModel from '@/models/Item';
 import { getTenantIdFromRequest } from '@/lib/tenant';
+import { requireAuth } from '@/lib/apiAuth';
 
 export async function POST(req: NextRequest) {
     try {
         await connectToDatabase();
-        const tenant = getTenantIdFromRequest(req);
+        const auth = await requireAuth(req, 'inventory.manage');
+        if (!auth.ok) return auth.res;
+        const tenant = auth.ctx.account.tenantId || getTenantIdFromRequest(req);
         const { items } = await req.json();
 
         if (!Array.isArray(items) || items.length === 0) {
@@ -50,6 +53,7 @@ export async function POST(req: NextRequest) {
         }
 
         await ItemModel.bulkSave(toSave);
+        // TODO: send email/push notifications when items hit low/out-of-stock after a sale.
         return NextResponse.json({ success: true, updates });
     } catch (e) {
         console.error('POST /api/inventory/sell error', e);

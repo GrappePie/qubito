@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { connectToDatabase } from '@/lib/mongodb';
 import CategoryModel from '@/models/Category';
 import { getTenantIdFromRequest } from '@/lib/tenant';
+import { requireAuth } from '@/lib/apiAuth';
 
 function slugify(input: string) {
   return input
@@ -16,13 +17,17 @@ function slugify(input: string) {
 export async function GET(req: NextRequest) {
   try {
     await connectToDatabase();
-    const tenant = getTenantIdFromRequest(req);
+    const auth = await requireAuth(req);
+    if (!auth.ok) return auth.res;
+
+    const tenant = auth.ctx.account.tenantId || getTenantIdFromRequest(req);
     const categories = await CategoryModel.find({ owner: tenant, isActive: { $ne: false } })
       .sort({ name: 1 })
       .lean();
     return NextResponse.json(categories);
-  } catch {
-    return NextResponse.json({ error: 'Error al obtener categorías' }, { status: 500 });
+  } catch (error) {
+    console.error('GET /api/categories error', error);
+    return NextResponse.json({ error: 'Error al obtener categorias' }, { status: 500 });
   }
 }
 
@@ -30,20 +35,32 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   try {
     await connectToDatabase();
-    const body = await req.json();
-    const tenant = getTenantIdFromRequest(req);
-    const name: string = (body?.name ?? '').trim();
+    const auth = await requireAuth(req, 'categories.manage');
+    if (!auth.ok) return auth.res;
+
+    const body = await req.json().catch(() => ({} as Record<string, unknown>));
+    const tenant = auth.ctx.account.tenantId || getTenantIdFromRequest(req);
+    const name: string = (typeof body?.name === 'string' ? body.name : '').trim();
     if (!name) return NextResponse.json({ error: 'Nombre requerido' }, { status: 400 });
 
-    const existing = await CategoryModel.findOne({ owner: tenant, name: { $regex: `^${name}$`, $options: 'i' } });
+    const existing = await CategoryModel.findOne({
+      owner: tenant,
+      name: { $regex: `^${name}$`, $options: 'i' },
+    });
     if (existing) return NextResponse.json(existing, { status: 200 });
 
     const nowId = slugify(name) || 'categoria';
     const doc = new CategoryModel({
       categoryId: `${nowId}-${Date.now()}`,
       name,
-      description: (body?.description ?? 'Sin descripción').toString().trim(),
-      imageUrl: (body?.imageUrl ?? 'https://placehold.co/96x96/e2e8f0/475569?text=CAT').toString().trim(),
+      description: (typeof body?.description === 'string' ? body.description : 'Sin descripcion')
+        .toString()
+        .trim(),
+      imageUrl: (typeof body?.imageUrl === 'string'
+        ? body.imageUrl
+        : 'https://placehold.co/96x96/e2e8f0/475569?text=CAT')
+        .toString()
+        .trim(),
       parentCategoryId: body?.parentCategoryId ?? null,
       isActive: true,
       products: [],
@@ -51,8 +68,9 @@ export async function POST(req: NextRequest) {
     });
     await doc.save();
     return NextResponse.json(doc, { status: 201 });
-  } catch {
-    return NextResponse.json({ error: 'Error al crear la categoría' }, { status: 500 });
+  } catch (error) {
+    console.error('POST /api/categories error', error);
+    return NextResponse.json({ error: 'Error al crear la categoria' }, { status: 500 });
   }
 }
 

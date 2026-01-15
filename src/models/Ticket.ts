@@ -23,6 +23,7 @@ export interface ITicket {
     customerId?: string;
     customerName?: string;
     createdBy?: string;
+    cashSessionId?: string;
     subtotal: number;
     tax: number;
     tip: number;
@@ -41,6 +42,7 @@ const TicketSchema = new mongoose.Schema<ITicket>(
         customerId: { type: String, required: false },
         customerName: { type: String, required: false },
         createdBy: { type: String, required: false },
+        cashSessionId: { type: String, required: false },
         subtotal: { type: Number, required: true },
         tax: { type: Number, required: true },
         tip: { type: Number, default: 0 },

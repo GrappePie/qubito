@@ -15,6 +15,7 @@ import Image from 'next/image';
 import { toast } from 'react-hot-toast';
 import MultiCategorySelect from '@/components/common/MultiCategorySelect';
 import { useGetCategoriesQuery, useCreateCategoryMutation, type CategoryDTO } from '@/store/slices/categoriesApi';
+import PermissionGate from '@/components/PermissionGate';
 
 // Tipo alineado con backend (Mongoose usa _id)
 type Product = ProductDTO;
@@ -36,7 +37,7 @@ const emptyProduct: Product = {
     variants: [],
 };
 
-export default function ProductsPage() {
+function ProductsContent() {
     // Data desde RTK Query
     const { data: products = [], isLoading, isFetching } = useGetProductsQuery();
     const [createProduct, { isLoading: isCreating }] = useCreateProductMutation();
@@ -378,5 +379,13 @@ export default function ProductsPage() {
                 </div>
             )}
         </div>
+    );
+}
+
+export default function ProductsPage() {
+    return (
+        <PermissionGate permission="products.manage" redirectTo="/">
+            <ProductsContent />
+        </PermissionGate>
     );
 }

@@ -1,10 +1,11 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import Navbar from "@/components/Navbar";
 import { Providers } from "@/store/Providers";
 import { Toaster } from 'react-hot-toast';
 import EntitlementsGate from "@/components/EntitlementsGate";
+import AccountGate from "@/components/AccountGate";
+import AppFrame from "@/components/AppFrame";
 
 const geistSans = Geist({
     variable: "--font-geist-sans",
@@ -27,17 +28,16 @@ export default function RootLayout({
     children: React.ReactNode;
 }>) {
     return (
-        <html lang="en">
+        <html lang="es">
         <body
             className={`${geistSans.variable} ${geistMono.variable} antialiased overflow-hidden`}
         >
         <Providers>
             <EntitlementsGate>
-                <div className="flex min-h-0">
-                    <Navbar />
-                    <main className=" flex-1 h-screen p-4 overflow-x-hidden">{children}</main>
-                </div>
-                <Toaster position="top-right" />
+                <AccountGate>
+                    <AppFrame>{children}</AppFrame>
+                    <Toaster position="top-right" />
+                </AccountGate>
             </EntitlementsGate>
         </Providers>
         </body>

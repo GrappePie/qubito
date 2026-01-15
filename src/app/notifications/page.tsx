@@ -9,6 +9,7 @@ import {
     type NotificationDTO,
 } from '@/store/slices/notificationsApi';
 import { toast } from 'react-hot-toast';
+import PermissionGate from '@/components/PermissionGate';
 
 const iconMap: Record<NotificationDTO['type'], JSX.Element> = {
     email: <Mail size={18} />,
@@ -16,7 +17,7 @@ const iconMap: Record<NotificationDTO['type'], JSX.Element> = {
     whatsapp: <MessageCircle size={18} />,
 };
 
-export default function NotificationsPage() {
+function NotificationsContent() {
     const { data: notifications = [], isLoading } = useGetNotificationsQuery();
     const [addNotification, { isLoading: isAdding }] = useAddNotificationMutation();
     const [updateNotification, { isLoading: isUpdating }] = useUpdateNotificationMutation();
@@ -206,5 +207,13 @@ export default function NotificationsPage() {
                 </div>
             )}
         </>
+    );
+}
+
+export default function NotificationsPage() {
+    return (
+        <PermissionGate permission="notifications.view" redirectTo="/">
+            <NotificationsContent />
+        </PermissionGate>
     );
 }

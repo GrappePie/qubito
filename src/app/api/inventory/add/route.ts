@@ -2,12 +2,15 @@ import { NextRequest, NextResponse } from 'next/server';
 import { connectToDatabase } from '@/lib/mongodb';
 import ItemModel from '@/models/Item';
 import { getTenantIdFromRequest } from '@/lib/tenant';
+import { requireAuth } from '@/lib/apiAuth';
 
 // Creates a minimal Item scoped to the tenant. Accepts flexible fields and fills defaults.
 export async function POST(req: NextRequest) {
     try {
         await connectToDatabase();
-        const tenant = getTenantIdFromRequest(req);
+        const auth = await requireAuth(req, 'inventory.manage');
+        if (!auth.ok) return auth.res;
+        const tenant = auth.ctx.account.tenantId || getTenantIdFromRequest(req);
         const body = await req.json().catch(() => ({}));
         const name: string = (body?.name ?? '').toString().trim();
         if (!name) return NextResponse.json({ error: 'Nombre requerido' }, { status: 400 });
@@ -37,10 +40,10 @@ export async function POST(req: NextRequest) {
             isAvailableForSale: true,
             variants: Array.isArray(body?.variants) ? body.variants : [],
         });
+        // TODO: send email/push notifications for new product creation.
         return NextResponse.json(doc, { status: 201 });
     } catch (e) {
         console.error('POST /api/inventory/add error', e);
         return NextResponse.json({ error: 'Error al crear producto de inventario' }, { status: 500 });
     }
 }
-

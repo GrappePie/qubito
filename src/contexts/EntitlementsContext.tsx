@@ -6,6 +6,10 @@ const DEBUG_ENTITLEMENTS =
   process.env.NEXT_PUBLIC_DEBUG_ENTITLEMENTS === "1" ||
   process.env.NEXT_PUBLIC_DEBUG_ENTITLEMENTS === "true";
 
+const BYPASS_ENTITLEMENTS =
+  process.env.NEXT_PUBLIC_ENTITLEMENTS_BYPASS === "1" ||
+  process.env.NEXT_PUBLIC_ENTITLEMENTS_BYPASS === "true";
+
 export type VerifiedEntitlements = {
   ok: boolean;
   sub: string;
@@ -36,6 +40,10 @@ export function EntitlementsProvider({ children }: { children: React.ReactNode }
     if (typeof window === "undefined") return false;
     return /^(localhost|127\.0\.0\.1)$/i.test(window.location.hostname);
   }, []);
+  const shouldBypass = useMemo(() => {
+    if (BYPASS_ENTITLEMENTS) return true;
+    return isLocalBypass;
+  }, [isLocalBypass]);
 
   const refresh = useCallback(async () => {
     if (DEBUG_ENTITLEMENTS) console.log("[EntitlementsContext] refresh() starting");
@@ -43,8 +51,38 @@ export function EntitlementsProvider({ children }: { children: React.ReactNode }
     setError(null);
     setForbidden(false);
 
-    if (isLocalBypass) {
-      if (DEBUG_ENTITLEMENTS) console.log("[EntitlementsContext] bypassing entitlements on localhost");
+    // Try local session first
+    try {
+      const me = await fetch('/api/auth/me', { credentials: 'include' });
+      if (me.ok) {
+        const data = await me.json();
+        const tenant = data?.account?.tenantId as string | undefined;
+        const sub = data?.account?.userId as string | undefined;
+        const entitlements = ['pos.basic'];
+        const local: VerifiedEntitlements = {
+          ok: true,
+          sub: sub || 'local-session',
+          customerId: tenant || null,
+          entitlements,
+          iat: null,
+          exp: null,
+          iss: 'qubito',
+          aud: 'qubito',
+        };
+        try {
+          if (typeof window !== 'undefined') {
+            if (tenant) window.localStorage.setItem('qubito_tenant', tenant);
+            if (sub) window.localStorage.setItem('qubito_sub', sub);
+          }
+        } catch {}
+        setData(local);
+        setLoading(false);
+        return;
+      }
+    } catch {}
+
+    if (shouldBypass) {
+      if (DEBUG_ENTITLEMENTS) console.log("[EntitlementsContext] bypassing entitlements");
       const defaultTenant = process.env.NEXT_PUBLIC_DEFAULT_TENANT || process.env.DEFAULT_TENANT_ID || null;
       const local: VerifiedEntitlements = {
         ok: true,
@@ -112,7 +150,7 @@ export function EntitlementsProvider({ children }: { children: React.ReactNode }
       if (DEBUG_ENTITLEMENTS) console.log("[EntitlementsContext] refresh() finished");
       setLoading(false);
     }
-  }, [isLocalBypass]);
+  }, [shouldBypass]);
 
   useEffect(() => {
     // Fire once on mount

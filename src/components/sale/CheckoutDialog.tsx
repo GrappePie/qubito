@@ -9,7 +9,8 @@ interface CheckoutDialogProps {
     subtotal: number;
     tax: number;
     total: number;
-    onClose: () => void;
+    cashOpen?: boolean;
+  cashStatusLoading?: boolean;onClose: () => void;
     onComplete: (summary: CheckoutSummary) => Promise<void> | void;
 }
 
@@ -33,7 +34,8 @@ const CheckoutDialog: React.FC<CheckoutDialogProps> = ({
                                                            subtotal,
                                                            tax,
                                                            total,
-                                                           onClose,
+                                                           cashOpen,
+  cashStatusLoading,onClose,
                                                            onComplete,
                                                        }) => {
     const [cash, setCash] = useState(0);
@@ -66,7 +68,9 @@ const CheckoutDialog: React.FC<CheckoutDialogProps> = ({
     const remaining = Math.max(0, roundCurrency(totalDue - paid));
     const change = remaining > 0 ? 0 : roundCurrency(paid - totalDue);
     const perPerson = splitCount > 1 ? totalDue / splitCount : null;
-    const canFinalize = paid + 0.0001 >= totalDue;
+    const cashClosed = cashOpen === false;
+  const cashUnknown = cashStatusLoading === true;
+  const canFinalize = !cashClosed && !cashUnknown && paid + 0.0001 >= totalDue;
 
     const handleFinalize = async () => {
         if (!canFinalize || isSubmitting) return;
@@ -97,7 +101,16 @@ const CheckoutDialog: React.FC<CheckoutDialogProps> = ({
                 title={"Registrar pago"}
                 subtitle={"Captura los montos cobrados y confirma la venta para generar el ticket."}>
             <div className="flex flex-col gap-4">
-                <section className="grid grid-cols-1 gap-2 rounded-lg bg-slate-50 p-4 text-sm text-slate-700">
+                {cashStatusLoading && (
+          <div className="rounded-lg border border-slate-200 bg-slate-50 p-3 text-xs text-slate-600">
+            Verificando estado de caja...
+          </div>
+        )}
+        {cashClosed && (
+          <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 text-sm text-amber-700">
+            Caja cerrada. Abre la caja para cobrar esta venta.
+          </div>
+        )}<section className="grid grid-cols-1 gap-2 rounded-lg bg-slate-50 p-4 text-sm text-slate-700">
                     <div className="flex justify-between">
                         <span>Subtotal</span>
                         <span>{toCurrency(subtotal)}</span>
@@ -248,27 +261,33 @@ const CheckoutDialog: React.FC<CheckoutDialogProps> = ({
                     </div>
                 </section>
 
-                <footer className="flex flex-col gap-2 sm:flex-row sm:justify-end">
-                    <button
-                        type="button"
-                        onClick={onClose}
-                        className="h-11 rounded-lg border border-slate-300 px-4 font-semibold text-slate-600 hover:bg-slate-100"
-                    >
-                        Cancelar
-                    </button>
-                    <button
-                        type="button"
-                        disabled={!canFinalize || isSubmitting}
-                        onClick={handleFinalize}
-                        className="h-11 rounded-lg bg-sky-600 px-4 font-semibold text-white transition-colors disabled:bg-slate-400 disabled:text-slate-200"
-                        aria-busy={isSubmitting}
-                    >
-                        {isSubmitting ? "Procesando..." : "Finalizar venta"}
-                    </button>
-                </footer>
-            </div>
-        </Dialog>
-    );
+        <footer className="flex flex-col gap-2 sm:flex-row sm:justify-end">
+          <button
+            type="button"
+            onClick={onClose}
+            className="h-11 rounded-lg border border-slate-300 px-4 font-semibold text-slate-600 hover:bg-slate-100"
+          >
+            Cancelar
+          </button>
+          <button
+            type="button"
+            disabled={!canFinalize || isSubmitting}
+            onClick={handleFinalize}
+            className="h-11 rounded-lg bg-sky-600 px-4 font-semibold text-white transition-colors disabled:bg-slate-400 disabled:text-slate-200"
+            aria-busy={isSubmitting}
+          >
+            {isSubmitting
+              ? "Procesando..."
+              : cashUnknown
+                ? "Verificando caja..."
+                : cashClosed
+                  ? "Caja cerrada"
+                  : "Finalizar venta"}
+          </button>
+        </footer>
+      </div>
+    </Dialog>
+  );
 };
 
 export default CheckoutDialog;

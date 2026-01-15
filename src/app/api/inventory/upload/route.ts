@@ -3,6 +3,7 @@ import { connectToDatabase } from '@/lib/mongodb';
 import ItemModel from '@/models/Item';
 import { parse } from 'csv-parse/sync';
 import { getTenantIdFromRequest } from '@/lib/tenant';
+import { requireAuth } from '@/lib/apiAuth';
 
 type RawRow = Record<string, unknown>;
 
@@ -31,7 +32,9 @@ function getNum(row: RawRow, ...keys: string[]): number {
 
 export async function POST(req: NextRequest) {
     try {
-        const tenant = getTenantIdFromRequest(req);
+        const auth = await requireAuth(req, 'inventory.manage');
+        if (!auth.ok) return auth.res;
+        const tenant = auth.ctx.account.tenantId || getTenantIdFromRequest(req);
         const formData = await req.formData();
         const file = formData.get('file') as File | null;
         if (!file) return NextResponse.json({ error: 'Archivo requerido' }, { status: 400 });
@@ -78,6 +81,7 @@ export async function POST(req: NextRequest) {
             );
         }
 
+        // TODO: send email/push notifications for new products and low stock after bulk import.
         return NextResponse.json({ status: 'ok', processed: rows.length });
     } catch (e) {
         console.error('POST /api/inventory/upload error', e);

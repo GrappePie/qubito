@@ -7,11 +7,12 @@ import { toast } from 'react-hot-toast';
 import InventoryTable from '@/components/inventory/InventoryTable';
 import AdjustStockModal from '@/components/inventory/AdjustStockModal';
 import StockHistoryModal from '@/components/inventory/StockHistoryModal';
+import PermissionGate from '@/components/PermissionGate';
 
 // Interfaz para el objeto de producto según productos API
 type Product = ProductDTO & { _id: string };
 
-export default function InventoryPage() {
+function InventoryContent() {
   const { data: products = [], isLoading, refetch } = useGetProductsQuery();
 
   // Modal Ajuste
@@ -59,5 +60,13 @@ export default function InventoryPage() {
         />
       )}
     </div>
+  );
+}
+
+export default function InventoryPage() {
+  return (
+    <PermissionGate permission="inventory.manage" redirectTo="/">
+      <InventoryContent />
+    </PermissionGate>
   );
 }
