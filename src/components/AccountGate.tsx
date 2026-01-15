@@ -7,15 +7,26 @@ export default function AccountGate({ children }: { children: React.ReactNode })
   const { loading, needsBootstrap, bootstrapAdmin, error, hasAdmin } = useAccounts();
   const [displayName, setDisplayName] = useState('');
   const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [localError, setLocalError] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLocalError(null);
+    if (password.length < 8) {
+      setLocalError('La contrasena debe tener al menos 8 caracteres.');
+      return;
+    }
+    if (password !== confirmPassword) {
+      setLocalError('La confirmacion de contrasena no coincide.');
+      return;
+    }
     setSubmitting(true);
     try {
-      await bootstrapAdmin({ displayName, email });
+      await bootstrapAdmin({ displayName, email, password });
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
       setLocalError(msg);
@@ -73,6 +84,40 @@ export default function AccountGate({ children }: { children: React.ReactNode })
                 placeholder="admin@tu-negocio.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700">Contrasena</label>
+              <div className="relative">
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  className="mt-1 w-full rounded-lg border px-3 py-2 pr-24 focus:outline-none focus:ring-2 focus:ring-sky-500"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  minLength={8}
+                  required
+                />
+                <button
+                  type="button"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-sky-700 hover:underline"
+                  onClick={() => setShowPassword((v) => !v)}
+                >
+                  {showPassword ? 'Ocultar' : 'Mostrar'}
+                </button>
+              </div>
+              <p className="text-xs text-slate-500 mt-1">Minimo 8 caracteres.</p>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700">
+                Confirmar contrasena
+              </label>
+              <input
+                type={showPassword ? 'text' : 'password'}
+                className="mt-1 w-full rounded-lg border px-3 py-2 focus:outline-none focus:ring-2 focus:ring-sky-500"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                minLength={8}
+                required
               />
             </div>
 
