@@ -91,8 +91,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'missing_user' }, { status: 400 });
     }
     const password = typeof body?.password === 'string' ? body.password : '';
-    const requiresPassword = !userIdFromHeader;
-    if ((requiresPassword && !password) || (password && password.length < 8)) {
+    if (!password || password.length < 8) {
       return NextResponse.json({ error: 'weak_password' }, { status: 400 });
     }
 
@@ -123,7 +122,7 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    const passwordHash = password ? await hashPassword(password) : null;
+    const passwordHash = await hashPassword(password);
 
     const account = await AccountModel.create({
       tenantId,

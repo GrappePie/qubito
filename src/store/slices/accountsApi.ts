@@ -72,7 +72,7 @@ export const accountsApi = createApi({
     }),
     createBootstrapAdmin: builder.mutation<
       BootstrapResponse,
-      { displayName?: string; email?: string }
+      { displayName?: string; email?: string; password?: string }
     >({
       query: (body) => ({ url: 'accounts/bootstrap', method: 'POST', body }),
       invalidatesTags: [
