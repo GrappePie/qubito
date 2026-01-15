@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { connectToDatabase } from '@/lib/mongodb';
-import { getTenantIdFromRequest } from '@/lib/tenant';
+import { getTenantIdFromRequest, getUserSubFromRequest } from '@/lib/tenant';
 import AccountModel from '@/models/Account';
 import RoleModel from '@/models/Role';
 import {
@@ -84,12 +84,15 @@ export async function POST(req: NextRequest) {
     await connectToDatabase();
     const body = await req.json().catch(() => ({} as Record<string, unknown>));
     const tenantId = getTenantIdFromRequest(req);
-    const userIdRaw = typeof body?.userId === 'string' ? body.userId.trim() : '';
+    const userIdFromBody = typeof body?.userId === 'string' ? body.userId.trim() : '';
+    const userIdFromHeader = getUserSubFromRequest(req) ?? '';
+    const userIdRaw = userIdFromBody || userIdFromHeader;
     if (!userIdRaw) {
       return NextResponse.json({ error: 'missing_user' }, { status: 400 });
     }
     const password = typeof body?.password === 'string' ? body.password : '';
-    if (!password || password.length < 8) {
+    const requiresPassword = !userIdFromHeader;
+    if ((requiresPassword && !password) || (password && password.length < 8)) {
       return NextResponse.json({ error: 'weak_password' }, { status: 400 });
     }
 
@@ -120,7 +123,7 @@ export async function POST(req: NextRequest) {
       });
     }
 
-    const passwordHash = await hashPassword(password);
+    const passwordHash = password ? await hashPassword(password) : null;
 
     const account = await AccountModel.create({
       tenantId,
