@@ -23,8 +23,10 @@ const toCurrency = (value: number) => value.toLocaleString("es-MX", {
 });
 
 const sanitizeNonNegativeNumber = (value: string) => {
-    const parsed = Number(value.replace(/,/g, "."));
-    return Number.isFinite(parsed) && parsed >= 0 ? parsed : 0;
+    const trimmed = value.replace(/,/g, ".");
+    if (trimmed === "") return "" as const;
+    const parsed = Number(trimmed);
+    return Number.isFinite(parsed) && parsed >= 0 ? trimmed : "0";
 };
 
 const roundCurrency = (value: number | string) => Math.round((Number(value) + Number.EPSILON) * 100) / 100;
@@ -38,53 +40,58 @@ const CheckoutDialog: React.FC<CheckoutDialogProps> = ({
   cashStatusLoading,onClose,
                                                            onComplete,
                                                        }) => {
-    const [cash, setCash] = useState(0);
-    const [card, setCard] = useState(0);
+    const [cash, setCash] = useState<string>("");
+    const [card, setCard] = useState<string>("");
     const [tipPreset, setTipPreset] = useState<number | null>(null);
-    const [customTip, setCustomTip] = useState(0);
-    const [splitCount, setSplitCount] = useState(1);
+    const [customTip, setCustomTip] = useState<string>("0");
+    const [splitCount, setSplitCount] = useState<string>("1");
     const [customerName, setCustomerName] = useState("");
     const [isSubmitting, setIsSubmitting] = useState(false);
 
     useEffect(() => {
         if (!open) {
-            setCash(0);
-            setCard(0);
+            setCash("");
+            setCard("");
             setTipPreset(null);
-            setCustomTip(0);
-            setSplitCount(1);
+            setCustomTip("0");
+            setSplitCount("1");
             setCustomerName("");
         }
     }, [open]);
+
+    const numericCash = Number(cash || 0);
+    const numericCard = Number(card || 0);
+    const numericCustomTip = Number(customTip || 0);
+    const numericSplitCount = Math.max(1, Math.trunc(Number(splitCount) || 1));
 
     const tipFromPreset = useMemo(() => {
         if (tipPreset == null) return 0;
         return roundCurrency(subtotal * (tipPreset / 100));
     }, [tipPreset, subtotal]);
 
-    const tipAmount = roundCurrency(tipPreset == null ? customTip : tipFromPreset);
+    const tipAmount = roundCurrency(tipPreset == null ? numericCustomTip : tipFromPreset);
     const totalDue = roundCurrency(total + tipAmount);
-    const paid = roundCurrency(cash + card);
+    const paid = roundCurrency(numericCash + numericCard);
     const remaining = Math.max(0, roundCurrency(totalDue - paid));
     const change = remaining > 0 ? 0 : roundCurrency(paid - totalDue);
-    const perPerson = splitCount > 1 ? totalDue / splitCount : null;
+    const perPerson = numericSplitCount > 1 ? totalDue / numericSplitCount : null;
     const cashClosed = cashOpen === false;
   const cashUnknown = cashStatusLoading === true;
-  const canFinalize = !cashClosed && !cashUnknown && paid + 0.0001 >= totalDue;
+  const canFinalize = !cashClosed && !cashUnknown && Number(paid) + 0.0001 >= Number(totalDue);
 
     const handleFinalize = async () => {
         if (!canFinalize || isSubmitting) return;
         try {
             setIsSubmitting(true);
             await onComplete({
-                cash: roundCurrency(cash),
-                card: roundCurrency(card),
+                cash: roundCurrency(numericCash),
+                card: roundCurrency(numericCard),
                 tip: tipAmount,
                 paid,
                 change,
                 totalDue,
                 customerName: customerName.trim() || undefined,
-                splitCount: splitCount > 1 ? splitCount : undefined,
+                splitCount: numericSplitCount > 1 ? numericSplitCount : undefined,
                 tipType: tipPreset == null ? "custom" : "percentage",
                 tipPercentage: tipPreset == null ? undefined : tipPreset,
             });
@@ -139,7 +146,7 @@ const CheckoutDialog: React.FC<CheckoutDialogProps> = ({
                                     type="button"
                                     onClick={() => {
                                         setTipPreset(pct);
-                                        setCustomTip(0);
+                                        setCustomTip("0");
                                     }}
                                     className={`rounded-full px-3 py-1 text-sm font-medium transition-colors ${
                                         tipPreset === pct
@@ -157,7 +164,7 @@ const CheckoutDialog: React.FC<CheckoutDialogProps> = ({
                                 onClick={() => {
                                     setTipPreset(null);
                                     // si está en 0, mantenlo en 0 para representar "sin propina personalizada"
-                                    setCustomTip((prev) => (prev < 0 ? 0 : prev));
+                                                                        setCustomTip((prev) => (Number(prev) < 0 ? "0" : prev));
                                     const input = document.getElementById("custom-tip-input");
                                     if (input) {
                                         input.focus();
@@ -206,7 +213,7 @@ const CheckoutDialog: React.FC<CheckoutDialogProps> = ({
                             type="number"
                             min={0}
                             value={cash}
-                            onChange={(event) => setCash(sanitizeNonNegativeNumber(event.target.value))}
+                            onChange={(event) => setCash(sanitizeNonNegativeNumber(event.target.value) as string)}
                             className="h-10 rounded border border-slate-300 px-3"
                         />
                     </label>
@@ -216,7 +223,7 @@ const CheckoutDialog: React.FC<CheckoutDialogProps> = ({
                             type="number"
                             min={0}
                             value={card}
-                            onChange={(event) => setCard(sanitizeNonNegativeNumber(event.target.value))}
+                            onChange={(event) => setCard(sanitizeNonNegativeNumber(event.target.value) as string)}
                             className="h-10 rounded border border-slate-300 px-3"
                         />
                     </label>
@@ -236,7 +243,7 @@ const CheckoutDialog: React.FC<CheckoutDialogProps> = ({
                             type="number"
                             min={1}
                             value={splitCount}
-                            onChange={(event) => setSplitCount(Math.max(1, Math.trunc(Number(event.target.value) || 1)))}
+                            onChange={(event) => setSplitCount(sanitizeNonNegativeNumber(event.target.value) || "1")}
                             className="h-10 rounded border border-slate-300 px-3"
                         />
                         {perPerson && (
