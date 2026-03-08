@@ -26,6 +26,9 @@ export type AccountDTO = {
   roleName: string | null;
   isAdmin: boolean;
   permissions: string[];
+  settings: {
+    tableQuantity: number;
+  };
 };
 
 export type AccountsResponse = {
@@ -98,7 +101,9 @@ export const accountsApi = createApi({
     }),
     updateAccount: builder.mutation<
       AccountDTO,
-      { id: string; data: Partial<AccountDTO> & { roleId?: string; password?: string } }
+      { id: string; data: Partial<AccountDTO> & ({ roleId?: string; password?: string } | {settings: {
+            tableQuantity: number
+          }}) }
     >({
       query: ({ id, data }) => ({
         url: `accounts/${id}`,

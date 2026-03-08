@@ -10,6 +10,9 @@ export interface Account {
   isAdmin: boolean;
   createdBy?: string | null;
   passwordHash?: string | null;
+  settings: {
+    tableQuantity: number;
+  };
 }
 
 const AccountSchema = new Schema<Account>(
@@ -22,6 +25,9 @@ const AccountSchema = new Schema<Account>(
     isAdmin: { type: Boolean, default: false },
     createdBy: { type: String, default: null },
     passwordHash: { type: String, default: null },
+    settings: {
+        tableQuantity: { type: Number, default: 10 },
+    },
   },
   { timestamps: true }
 );

@@ -22,6 +22,7 @@ export async function GET(req: NextRequest) {
         roleName,
         isAdmin: account.isAdmin,
         permissions: rolePerms,
+        settings: account.settings
       },
       session,
     });
