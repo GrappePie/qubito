@@ -8,6 +8,9 @@ import {useGetOrdersQuery} from "@/store/slices/ordersApi";
 interface TableProps {
     number: number;
 }
+interface TablesComponentProps {
+    tables: TableProps[];
+}
 
 const Table = ({ number }: TableProps) => {
     const subtotal = useAppSelector(selectSubtotalForTable(number));
@@ -28,7 +31,7 @@ const Table = ({ number }: TableProps) => {
     );
 };
 
-const TablesComponent = () => {
+const TablesComponent = ({tables}:TablesComponentProps) => {
     const { account, availablePermissions, refresh, hasPermission } = useAccounts();
     const {data} = useGetOrdersQuery();
     const tableQuantity = account?.settings?.tableQuantity;
@@ -46,8 +49,8 @@ const TablesComponent = () => {
                 <div className="font-bold text-lg">Orden Rápida</div>
                 <div className="text-sm">{quickOccupied ? "$" + quickSubtotal.toFixed(2) : 'Nueva'}</div>
             </button>
-          {Array.from({ length: tableQuantity ?? 0 }, (_, index) => (
-              <Table key={index + 1} number={index + 1} />
+          {tables.map(t => (
+              <Table key={t.number} number={t.number} />
           ))}
         </div>
     );
