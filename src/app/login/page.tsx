@@ -22,6 +22,11 @@ export default function LoginPage() {
   const router = useRouter();
   const search = useSearchParams();
   const { data: ent, forbidden, refresh: refreshEntitlements } = useEntitlements();
+  const TENANT_ID_REGEX = /^[A-Za-z0-9._-]{3,128}$/;
+  const normalizeTenantId = (val?: string | null) => {
+    const v = (val || '').trim();
+    return v && TENANT_ID_REGEX.test(v) ? v : '';
+  };
   const [loginForm, setLoginForm] = useState<LoginForm>({
     userId: '',
     password: '',
@@ -38,12 +43,41 @@ export default function LoginPage() {
   const [submitting, setSubmitting] = useState(false);
   const [showLoginPassword, setShowLoginPassword] = useState(false);
   const [showBootstrapPassword, setShowBootstrapPassword] = useState(false);
+  const [ssoLoading, setSsoLoading] = useState(false);
+
+  const entitlementsBase = useMemo(
+    () =>
+      (process.env.NEXT_PUBLIC_ENTITLEMENTS_BASE_URL ||
+        process.env.ENTITLEMENTS_BASE_URL ||
+        'https://pixelgrimoire.com'
+      ).replace(/\/$/, ''),
+    []
+  );
+  const allowLocalLogin = useMemo(() => {
+    if (process.env.NEXT_PUBLIC_ENABLE_LOCAL_LOGIN === 'true') return true;
+    if (typeof window === 'undefined') return false;
+    return /^(localhost|127\.0\.0\.1)$/i.test(window.location.hostname);
+  }, []);
+  const isLocalBypass = ent?.iss === 'localhost';
 
   const tenantFromEntitlements = useMemo(
-    () => ent?.customerId || process.env.NEXT_PUBLIC_DEFAULT_TENANT || process.env.DEFAULT_TENANT_ID || '',
-    [ent?.customerId]
+    () => normalizeTenantId(ent?.tenantId ?? ent?.customerId),
+    [ent?.customerId, ent?.tenantId]
   );
-  const tenantId = tenantFromEntitlements;
+  const tenantFromQuery = useMemo(() => normalizeTenantId(search?.get('tenantId')), [search]);
+  const tenantFromStorage = useMemo(() => {
+    if (typeof window === 'undefined') return '';
+    try {
+      return normalizeTenantId(window.localStorage.getItem('qubito_tenant'));
+    } catch {
+      return '';
+    }
+  }, []);
+  const tenantId =
+    tenantFromEntitlements ||
+    tenantFromQuery ||
+    tenantFromStorage ||
+    normalizeTenantId(process.env.NEXT_PUBLIC_DEFAULT_TENANT || '');
 
   const checkAdmin = async (tenantId: string) => {
     if (!tenantId) return;
@@ -64,10 +98,24 @@ export default function LoginPage() {
   };
 
   useEffect(() => {
-    if (!tenantFromEntitlements) return;
-    const timer = setTimeout(() => checkAdmin(tenantFromEntitlements), 200);
+    if (!allowLocalLogin) return;
+    if (!tenantId) return;
+    const timer = setTimeout(() => checkAdmin(tenantId), 200);
     return () => clearTimeout(timer);
-  }, [tenantFromEntitlements]);
+  }, [allowLocalLogin, tenantId]);
+
+  useEffect(() => {
+    if (!tenantFromQuery) return;
+    try {
+      window.localStorage.setItem('qubito_tenant', tenantFromQuery);
+    } catch {}
+  }, [tenantFromQuery]);
+
+  useEffect(() => {
+    if (!ent?.ok || isLocalBypass) return;
+    const next = search?.get('next');
+    router.replace(next || '/');
+  }, [ent?.ok, isLocalBypass, router, search]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -148,7 +196,21 @@ export default function LoginPage() {
     }
   };
 
-  const showBootstrap = hasAdmin === false;
+  const showBootstrap = allowLocalLogin && hasAdmin === false;
+
+  const handleSsoLogin = async () => {
+    setSsoLoading(true);
+    try {
+      await refreshEntitlements();
+    } catch {}
+    setSsoLoading(false);
+  };
+
+  const handleOpenPixelGrimoire = () => {
+    if (typeof window === 'undefined') return;
+    const redirect = encodeURIComponent(window.location.origin);
+    window.location.replace(`${entitlementsBase}/sign-in?redirect=${redirect}`);
+  };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-slate-50 p-4">
@@ -164,144 +226,172 @@ export default function LoginPage() {
         </div>
 
         <div className="p-6 space-y-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-lg font-semibold text-slate-800">
-                {showBootstrap ? 'Crear administrador' : 'Iniciar sesión'}
-              </p>
-              <p className="text-sm text-slate-500">
-                {showBootstrap ? 'Primer admin con contraseña' : 'Accede a tu tenant interno'}
-              </p>
-            </div>
+          <div>
+            <p className="text-lg font-semibold text-slate-800">Continuar con Pixel Grimoire</p>
+            <p className="text-sm text-slate-500">
+              Usa tu cuenta principal para acceder a Qubito con la licencia activa.
+            </p>
           </div>
+
+          <button
+            type="button"
+            onClick={handleSsoLogin}
+            disabled={ssoLoading}
+            className="w-full inline-flex items-center justify-center gap-2 rounded-lg bg-sky-600 text-white px-4 py-2 font-semibold hover:bg-sky-700 disabled:opacity-60"
+          >
+            <LogIn className="h-4 w-4" />
+            {ssoLoading ? 'Conectando...' : 'Continuar con Pixel Grimoire'}
+          </button>
+          <button
+            type="button"
+            onClick={handleOpenPixelGrimoire}
+            className="w-full inline-flex items-center justify-center gap-2 rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
+          >
+            Ir a iniciar sesion
+          </button>
+          <p className="text-xs text-slate-500">
+            Si ya tienes sesion iniciada en Pixel Grimoire, se conectara automaticamente.
+          </p>
 
           {forbidden && (
             <div className="text-sm text-red-700 bg-red-50 border border-red-200 rounded-lg p-3">
-              Tu suscripción no habilita Qubito. Regresa a pixelgrimoire.com para gestionar tus proyectos.
+              Tu suscripcion no habilita Qubito. Regresa a Pixel Grimoire para gestionar tus proyectos.
               <div className="mt-2">
-                <a
-                  className="text-sky-600 underline"
-                  href={(process.env.NEXT_PUBLIC_ENTITLEMENTS_BASE_URL || process.env.ENTITLEMENTS_BASE_URL || 'https://pixelgrimoire.com').replace(/\/$/, '')}
-                >
-                  Ir a pixelgrimoire.com
+                <a className="text-sky-600 underline" href={entitlementsBase}>
+                  Ir a Pixel Grimoire
                 </a>
               </div>
             </div>
           )}
 
-          {!showBootstrap ? (
-            <form className="space-y-3" onSubmit={handleLogin}>
+          {allowLocalLogin && (
+            <div className="pt-4 border-t border-slate-200 space-y-4">
               <div>
-                <label className="text-sm text-slate-700 flex items-center gap-1">
-                  <User className="h-4 w-4" /> Usuario
-                </label>
-                <input
-                  className="mt-1 w-full rounded-lg border px-3 py-2 focus:outline-none focus:ring-2 focus:ring-sky-500"
-                  value={loginForm.userId}
-                  onChange={(e) => setLoginForm((f) => ({ ...f, userId: e.target.value }))}
-                  required
-                />
+                <p className="text-base font-semibold text-slate-800">
+                  {showBootstrap ? 'Crear administrador' : 'Acceso local (dev)'}
+                </p>
+                <p className="text-sm text-slate-500">
+                  {showBootstrap ? 'Primer admin con contraseña' : 'Solo para desarrollo local.'}
+                </p>
               </div>
-              <div>
-                <label className="text-sm text-slate-700 flex items-center gap-1">
-                  <Lock className="h-4 w-4" /> Contraseña
-                </label>
-                <div className="relative">
-                  <input
-                    type={showLoginPassword ? 'text' : 'password'}
-                    className="mt-1 w-full rounded-lg border px-3 py-2 pr-24 focus:outline-none focus:ring-2 focus:ring-sky-500"
-                    value={loginForm.password}
-                    onChange={(e) => setLoginForm((f) => ({ ...f, password: e.target.value }))}
-                    required
-                  />
+
+              {!showBootstrap ? (
+                <form className="space-y-3" onSubmit={handleLogin}>
+                  <div>
+                    <label className="text-sm text-slate-700 flex items-center gap-1">
+                      <User className="h-4 w-4" /> Usuario
+                    </label>
+                    <input
+                      className="mt-1 w-full rounded-lg border px-3 py-2 focus:outline-none focus:ring-2 focus:ring-sky-500"
+                      value={loginForm.userId}
+                      onChange={(e) => setLoginForm((f) => ({ ...f, userId: e.target.value }))}
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm text-slate-700 flex items-center gap-1">
+                      <Lock className="h-4 w-4" /> Contraseña
+                    </label>
+                    <div className="relative">
+                      <input
+                        type={showLoginPassword ? 'text' : 'password'}
+                        className="mt-1 w-full rounded-lg border px-3 py-2 pr-24 focus:outline-none focus:ring-2 focus:ring-sky-500"
+                        value={loginForm.password}
+                        onChange={(e) => setLoginForm((f) => ({ ...f, password: e.target.value }))}
+                        required
+                      />
+                      <button
+                        type="button"
+                        className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-sky-700 hover:underline"
+                        onClick={() => setShowLoginPassword((v) => !v)}
+                      >
+                        {showLoginPassword ? 'Ocultar' : 'Mostrar'}
+                      </button>
+                    </div>
+                  </div>
                   <button
-                    type="button"
-                    className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-sky-700 hover:underline"
-                    onClick={() => setShowLoginPassword((v) => !v)}
+                    type="submit"
+                    disabled={submitting}
+                    className="w-full inline-flex items-center justify-center gap-2 rounded-lg bg-sky-600 text-white px-4 py-2 font-semibold hover:bg-sky-700 disabled:opacity-60"
                   >
-                    {showLoginPassword ? 'Ocultar' : 'Mostrar'}
+                    <LogIn className="h-4 w-4" />
+                    Entrar
                   </button>
-                </div>
-              </div>
-              <button
-                type="submit"
-                disabled={submitting}
-                className="w-full inline-flex items-center justify-center gap-2 rounded-lg bg-sky-600 text-white px-4 py-2 font-semibold hover:bg-sky-700 disabled:opacity-60"
-              >
-                <LogIn className="h-4 w-4" />
-                Entrar
-              </button>
-              {checkingAdmin && <p className="text-xs text-slate-500">Revisando tenant...</p>}
-            </form>
-          ) : (
-            <form className="space-y-3" onSubmit={handleBootstrap}>
-              <div>
-                <label className="text-sm text-slate-700">Usuario</label>
-                <input
-                  className="mt-1 w-full rounded-lg border px-3 py-2 focus:outline-none focus:ring-2 focus:ring-sky-500"
-                  value={bootForm.userId}
-                  onChange={(e) => setBootForm((f) => ({ ...f, userId: e.target.value }))}
-                  required
-                />
-              </div>
-              <div>
-                <label className="text-sm text-slate-700">Nombre</label>
-                <input
-                  className="mt-1 w-full rounded-lg border px-3 py-2 focus:outline-none focus:ring-2 focus:ring-sky-500"
-                  value={bootForm.displayName}
-                  onChange={(e) => setBootForm((f) => ({ ...f, displayName: e.target.value }))}
-                  required
-                />
-              </div>
-              <div>
-                <label className="text-sm text-slate-700">Email (opcional)</label>
-                <input
-                  type="email"
-                  className="mt-1 w-full rounded-lg border px-3 py-2 focus:outline-none focus:ring-2 focus:ring-sky-500"
-                  value={bootForm.email}
-                  onChange={(e) => setBootForm((f) => ({ ...f, email: e.target.value }))}
-                />
-              </div>
-              <div>
-                <label className="text-sm text-slate-700">Contraseña</label>
-                <div className="relative">
-                  <input
-                    type={showBootstrapPassword ? 'text' : 'password'}
-                    className="mt-1 w-full rounded-lg border px-3 py-2 pr-24 focus:outline-none focus:ring-2 focus:ring-sky-500"
-                    value={bootForm.password}
-                    onChange={(e) => setBootForm((f) => ({ ...f, password: e.target.value }))}
-                    required
-                    minLength={8}
-                  />
+                  {checkingAdmin && <p className="text-xs text-slate-500">Revisando tenant...</p>}
+                </form>
+              ) : (
+                <form className="space-y-3" onSubmit={handleBootstrap}>
+                  <div>
+                    <label className="text-sm text-slate-700">Usuario</label>
+                    <input
+                      className="mt-1 w-full rounded-lg border px-3 py-2 focus:outline-none focus:ring-2 focus:ring-sky-500"
+                      value={bootForm.userId}
+                      onChange={(e) => setBootForm((f) => ({ ...f, userId: e.target.value }))}
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm text-slate-700">Nombre</label>
+                    <input
+                      className="mt-1 w-full rounded-lg border px-3 py-2 focus:outline-none focus:ring-2 focus:ring-sky-500"
+                      value={bootForm.displayName}
+                      onChange={(e) => setBootForm((f) => ({ ...f, displayName: e.target.value }))}
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm text-slate-700">Email (opcional)</label>
+                    <input
+                      type="email"
+                      className="mt-1 w-full rounded-lg border px-3 py-2 focus:outline-none focus:ring-2 focus:ring-sky-500"
+                      value={bootForm.email}
+                      onChange={(e) => setBootForm((f) => ({ ...f, email: e.target.value }))}
+                    />
+                  </div>
+                  <div>
+                    <label className="text-sm text-slate-700">Contraseña</label>
+                    <div className="relative">
+                      <input
+                        type={showBootstrapPassword ? 'text' : 'password'}
+                        className="mt-1 w-full rounded-lg border px-3 py-2 pr-24 focus:outline-none focus:ring-2 focus:ring-sky-500"
+                        value={bootForm.password}
+                        onChange={(e) => setBootForm((f) => ({ ...f, password: e.target.value }))}
+                        required
+                        minLength={8}
+                      />
+                      <button
+                        type="button"
+                        className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-sky-700 hover:underline"
+                        onClick={() => setShowBootstrapPassword((v) => !v)}
+                      >
+                        {showBootstrapPassword ? 'Ocultar' : 'Mostrar'}
+                      </button>
+                    </div>
+                    <p className="text-xs text-slate-500 mt-1">
+                      Mínimo 8 caracteres. Usa letras y números.
+                    </p>
+                  </div>
+                  <div>
+                    <label className="text-sm text-slate-700">Confirmar contraseña</label>
+                    <input
+                      type={showBootstrapPassword ? 'text' : 'password'}
+                      className="mt-1 w-full rounded-lg border px-3 py-2 focus:outline-none focus:ring-2 focus:ring-sky-500"
+                      value={bootForm.confirmPassword}
+                      onChange={(e) => setBootForm((f) => ({ ...f, confirmPassword: e.target.value }))}
+                      required
+                      minLength={8}
+                    />
+                  </div>
                   <button
-                    type="button"
-                    className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-sky-700 hover:underline"
-                    onClick={() => setShowBootstrapPassword((v) => !v)}
+                    type="submit"
+                    disabled={submitting}
+                    className="w-full inline-flex items-center justify-center gap-2 rounded-lg bg-emerald-600 text-white px-4 py-2 font-semibold hover:bg-emerald-700 disabled:opacity-60"
                   >
-                    {showBootstrapPassword ? 'Ocultar' : 'Mostrar'}
+                    Crear administrador
                   </button>
-                </div>
-                <p className="text-xs text-slate-500 mt-1">Mínimo 8 caracteres. Usa letras y números.</p>
-              </div>
-              <div>
-                <label className="text-sm text-slate-700">Confirmar contraseña</label>
-                <input
-                  type={showBootstrapPassword ? 'text' : 'password'}
-                  className="mt-1 w-full rounded-lg border px-3 py-2 focus:outline-none focus:ring-2 focus:ring-sky-500"
-                  value={bootForm.confirmPassword}
-                  onChange={(e) => setBootForm((f) => ({ ...f, confirmPassword: e.target.value }))}
-                  required
-                  minLength={8}
-                />
-              </div>
-              <button
-                type="submit"
-                disabled={submitting}
-                className="w-full inline-flex items-center justify-center gap-2 rounded-lg bg-emerald-600 text-white px-4 py-2 font-semibold hover:bg-emerald-700 disabled:opacity-60"
-              >
-                Crear administrador
-              </button>
-            </form>
+                </form>
+              )}
+            </div>
           )}
         </div>
       </div>
