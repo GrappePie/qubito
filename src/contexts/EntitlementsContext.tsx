@@ -10,10 +10,33 @@ const BYPASS_ENTITLEMENTS =
   process.env.NEXT_PUBLIC_ENTITLEMENTS_BYPASS === "1" ||
   process.env.NEXT_PUBLIC_ENTITLEMENTS_BYPASS === "true";
 
+const TENANT_ID_REGEX = /^[A-Za-z0-9._-]{3,128}$/;
+
+function normalizeTenantId(val: string | null | undefined) {
+  const v = (val || "").trim();
+  return v && TENANT_ID_REGEX.test(v) ? v : "";
+}
+
+function readTenantHint(): string | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const params = new URLSearchParams(window.location.search);
+    const fromUrl = normalizeTenantId(params.get("tenantId"));
+    if (fromUrl) return fromUrl;
+  } catch {}
+  try {
+    const fromStorage = normalizeTenantId(window.localStorage.getItem("qubito_tenant"));
+    if (fromStorage) return fromStorage;
+  } catch {}
+  const fromEnv = normalizeTenantId(process.env.NEXT_PUBLIC_DEFAULT_TENANT || "");
+  return fromEnv || null;
+}
+
 export type VerifiedEntitlements = {
   ok: boolean;
   sub: string;
   customerId: string | null;
+  tenantId: string | null;
   entitlements: string[];
   iat: number | null;
   exp: number | null;
@@ -63,6 +86,7 @@ export function EntitlementsProvider({ children }: { children: React.ReactNode }
           ok: true,
           sub: sub || 'local-session',
           customerId: tenant || null,
+          tenantId: tenant || null,
           entitlements,
           iat: null,
           exp: null,
@@ -88,6 +112,7 @@ export function EntitlementsProvider({ children }: { children: React.ReactNode }
         ok: true,
         sub: "local-dev",
         customerId: defaultTenant,
+        tenantId: defaultTenant,
         entitlements: ["pos.basic"],
         iat: null,
         exp: null,
@@ -97,7 +122,7 @@ export function EntitlementsProvider({ children }: { children: React.ReactNode }
       // Persist tenant hints for API calls
       try {
         if (typeof window !== 'undefined') {
-          const tenant = local.customerId ?? local.sub;
+          const tenant = local.tenantId ?? local.customerId ?? local.sub;
           window.localStorage.setItem('qubito_tenant', tenant);
           window.localStorage.setItem('qubito_sub', local.sub);
         }
@@ -111,7 +136,7 @@ export function EntitlementsProvider({ children }: { children: React.ReactNode }
       // Persist tenant hints for API calls
       try {
         if (typeof window !== 'undefined') {
-          const tenant = (res.customerId ?? res.sub) as string;
+          const tenant = (res.tenantId ?? res.customerId ?? res.sub) as string;
           window.localStorage.setItem('qubito_tenant', tenant);
           window.localStorage.setItem('qubito_sub', res.sub);
         }
@@ -121,6 +146,7 @@ export function EntitlementsProvider({ children }: { children: React.ReactNode }
         console.log("[EntitlementsContext] refresh() success", {
           sub: res.sub,
           customerId: res.customerId,
+          tenantId: res.tenantId,
           entitlements: res.entitlements,
         });
     } catch (e: unknown) {
@@ -128,6 +154,14 @@ export function EntitlementsProvider({ children }: { children: React.ReactNode }
       if (DEBUG_ENTITLEMENTS) console.error("[EntitlementsContext] refresh() error", msg);
       // Handle known markers from getEntitlements
       if (msg === "unauthenticated") {
+        const tenantHint = readTenantHint();
+        if (tenantHint) {
+          try {
+            window.localStorage.setItem("qubito_tenant", tenantHint);
+          } catch {}
+          setError(msg);
+          return;
+        }
         const base = process.env.NEXT_PUBLIC_ENTITLEMENTS_BASE_URL || process.env.ENTITLEMENTS_BASE_URL || "";
         // On unauthenticated, send users to landing sign-in with a redirect
         // back to the Qubito origin (not the full path), as requested.

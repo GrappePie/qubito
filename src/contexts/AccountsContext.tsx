@@ -81,7 +81,7 @@ export function AccountsProvider({ children }: { children: React.ReactNode }) {
   const buildHeaders = useCallback(() => {
     const headers = new Headers({ 'content-type': 'application/json' });
     if (!entitlementData) return headers;
-    const tenant = entitlementData.customerId ?? entitlementData.sub;
+    const tenant = entitlementData.tenantId ?? entitlementData.customerId ?? entitlementData.sub;
     const sub = entitlementData.sub;
     if (tenant) headers.set('x-tenant-id', tenant);
     if (sub) headers.set('x-user-sub', sub);
