@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/mongodb";
 import AccountModel from "@/models/Account";
 import RoleModel from "@/models/Role";
-import { hasEntitlement, verifyEntitlementsToken } from "@/lib/entitlements";
+import { verifyEntitlementsToken } from "@/lib/entitlements";
 import { hashPassword, setSessionCookie, signSession } from "@/lib/auth";
 import { normalizePermissions } from "@/lib/permissions";
 import { resolveQubitoTenantId } from "@/lib/qubitoPlatform";
@@ -15,15 +15,15 @@ export async function POST(req: NextRequest) {
     const password = typeof body?.password === "string" ? body.password : "";
 
     if (!token) {
-      return NextResponse.json({ error: "missing_token" }, { status: 400 });
+      return NextResponse.json({ error: "missing_recovery_token" }, { status: 400 });
     }
     if (!password || password.length < 8) {
       return NextResponse.json({ error: "weak_password" }, { status: 400 });
     }
 
-    const payload = verifyEntitlementsToken(token, "qubito");
-    if (!hasEntitlement(payload, "pos.basic")) {
-      return NextResponse.json({ error: "missing_entitlement" }, { status: 403 });
+    const payload = verifyEntitlementsToken(token, "qubito-recovery");
+    if (payload.purpose !== "qubito_local_recovery") {
+      return NextResponse.json({ error: "invalid_recovery_token" }, { status: 401 });
     }
 
     const resolvedTenant = await resolveQubitoTenantId(payload, "pos.basic");
