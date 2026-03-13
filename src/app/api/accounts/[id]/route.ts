@@ -3,7 +3,7 @@ import { connectToDatabase } from '@/lib/mongodb';
 import AccountModel from '@/models/Account';
 import RoleModel from '@/models/Role';
 import { PermissionCode, normalizePermissions } from '@/lib/permissions';
-import { hashPassword } from '@/lib/auth';
+import { hashPassword, setSessionCookie, signSession } from '@/lib/auth';
 import { requireAuth } from '@/lib/apiAuth';
 import type { Role } from '@/models/Role';
 import type { Account } from '@/models/Account';
@@ -38,9 +38,9 @@ function serializeAccount(doc: WithId<Account>, role?: RolePayload | null) {
     roleName: role?.name ?? null,
     isAdmin: Boolean(doc.isAdmin),
     permissions: role?.permissions ?? [],
-        settings: {
-            tableQuantity: doc.settings?.tableQuantity ?? 10,
-        },
+    settings: {
+      tableQuantity: doc.settings?.tableQuantity ?? 10,
+    },
   };
 }
 
@@ -63,8 +63,12 @@ export async function PATCH(
       return NextResponse.json({ error: 'not_found' }, { status: 404 });
     }
     const updates: Partial<Account> = {};
+    const rawUserId = typeof body?.userId === 'string' ? body.userId : '';
     const rawName = typeof body?.displayName === 'string' ? body.displayName : '';
     const rawEmail = typeof body?.email === 'string' ? body.email : '';
+    if (rawUserId.trim() && rawUserId.trim() !== currentAccount.userId) {
+      updates.userId = rawUserId.trim().slice(0, 120);
+    }
     if (rawName.trim()) updates.displayName = rawName.trim().slice(0, 80);
     if (rawEmail.trim() || rawEmail === '') {
       updates.email = rawEmail.trim().slice(0, 120) || null;
@@ -79,7 +83,7 @@ export async function PATCH(
 
     let targetRole: RolePayload | null = null;
     if (body?.settings?.tableQuantity) {
-      updates.settings = {tableQuantity: Number(body?.settings?.tableQuantity)};
+      updates.settings = { tableQuantity: Number(body?.settings?.tableQuantity) };
     }
     if (typeof body?.roleId === 'string' && body.roleId.trim()) {
       const roleDoc = await RoleModel.findOne({
@@ -130,10 +134,26 @@ export async function PATCH(
       if (roleDoc) roleForResponse = serializeRole(roleDoc);
     }
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       account: serializeAccount(updated, roleForResponse),
     });
+
+    if (currentAccount._id.toString() === requester._id.toString()) {
+      const token = signSession({
+        sub: updated.userId,
+        tenantId,
+        roleId: updated.roleId ? updated.roleId.toString() : null,
+        isAdmin: updated.isAdmin,
+      });
+      setSessionCookie(response, token);
+    }
+
+    return response;
   } catch (error: unknown) {
+    const errObj = error as { code?: number };
+    if (errObj?.code === 11000) {
+      return NextResponse.json({ error: 'account_exists' }, { status: 409 });
+    }
     console.error('PATCH /api/accounts/[id] error', error);
     return NextResponse.json(
       { error: 'error_updating_account' },
