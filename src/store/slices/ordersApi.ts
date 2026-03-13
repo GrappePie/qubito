@@ -95,6 +95,12 @@ export const ordersApi = createApi({
   }),
   tagTypes: ["Orders", "Order"],
   endpoints: (builder) => ({
+    getOrders: builder.query<OrderDTO[], void>({
+      query: () => ({
+        url: "orders",
+        method: "GET",
+      }),
+    }),
     getOrder: builder.query<OrderDTO | null, string>({
       query: (contextId) => ({
         url: `orders/${encodeURIComponent(contextId)}`,
@@ -141,6 +147,7 @@ export const ordersApi = createApi({
 
 export const {
   useGetOrderQuery,
+    useGetOrdersQuery,
   useSaveOrderMutation,
   useCheckoutOrderMutation,
   useDeleteOrderMutation,

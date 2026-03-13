@@ -38,6 +38,9 @@ function serializeAccount(doc: WithId<Account>, role?: RolePayload | null) {
     roleName: role?.name ?? null,
     isAdmin: Boolean(doc.isAdmin),
     permissions: role?.permissions ?? [],
+    settings: {
+      tableQuantity: doc.settings?.tableQuantity ?? 10,
+    },
   };
 }
 
@@ -59,8 +62,7 @@ export async function PATCH(
     if (!currentAccount) {
       return NextResponse.json({ error: 'not_found' }, { status: 404 });
     }
-
-    const updates: Record<string, unknown> = {};
+    const updates: Partial<Account> = {};
     const rawUserId = typeof body?.userId === 'string' ? body.userId : '';
     const rawName = typeof body?.displayName === 'string' ? body.displayName : '';
     const rawEmail = typeof body?.email === 'string' ? body.email : '';
@@ -80,6 +82,9 @@ export async function PATCH(
     }
 
     let targetRole: RolePayload | null = null;
+    if (body?.settings?.tableQuantity) {
+      updates.settings = { tableQuantity: Number(body?.settings?.tableQuantity) };
+    }
     if (typeof body?.roleId === 'string' && body.roleId.trim()) {
       const roleDoc = await RoleModel.findOne({
         _id: body.roleId.trim(),

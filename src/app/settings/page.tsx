@@ -358,6 +358,21 @@ export default function SettingsPage() {
       toast.error(msg);
     }
   };
+  const onTablesChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = parseInt(e.target.value, 10);
+    if(e.type === 'blur') {
+      if (isNaN(value) || value < 1) {
+        e.target.value = '0';
+        toast.error('Ingresa un número válido de mesas');
+        return;
+      }
+      updateAccount({ id: account!.id, data: {settings:{ tableQuantity: value }} }).unwrap().then(() => {
+        toast.success(`Cantidad de mesas actualizada a ${value}`);
+      }).catch((err: unknown) => {        const msg = err instanceof Error ? err.message : 'No se pudo actualizar la cantidad de mesas';
+        toast.error(msg);
+      });
+    }
+  }
 
   return (
     <PermissionGate permission="settings.manage" redirectTo="/">
@@ -393,6 +408,20 @@ export default function SettingsPage() {
           Necesitas el rol de administrador para gestionar roles y usuarios.
         </div>
       )}
+
+      {canManage && (
+          <section className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-lg font-semibold text-slate-800">Gestion de Mesas</h3>
+                <p className="text-sm text-slate-500">
+                  Define la cantidad de mesas que apareceran.
+                </p>
+                <input type="number" onChange={onTablesChange} placeholder={"0"} step={1}  onBlur={onTablesChange}/>
+              </div>
+            </div>
+          </section>
+        )}
 
       {canManage && (
         <section className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm space-y-4">
