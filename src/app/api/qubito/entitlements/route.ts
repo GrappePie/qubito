@@ -99,35 +99,60 @@ async function resolveTenantId(payload: EntitlementsPayload, required?: string |
   }
 
   const entitlementCode = pickEntitlementCode(payload, required);
-  const response = await fetch(`${ENTITLEMENTS_BASE_URL.replace(/\/$/, "")}/api/apps/bootstrap`, {
-    method: "POST",
-    headers: {
-      "content-type": "application/json",
-      "x-api-key": PLATFORM_API_KEY,
-    },
-    cache: "no-store",
-    body: JSON.stringify({
-      customerId,
-      appSlug: "qubito",
-      entitlementCode,
-      bindingType: "tenant",
-    }),
-  });
+  try {
+    const response = await fetch(
+      `${ENTITLEMENTS_BASE_URL.replace(/\/$/, "")}/api/apps/bootstrap`,
+      {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          "x-api-key": PLATFORM_API_KEY,
+        },
+        cache: "no-store",
+        body: JSON.stringify({
+          customerId,
+          appSlug: "qubito",
+          entitlementCode,
+          bindingType: "tenant",
+        }),
+      }
+    );
 
-  if (!response.ok) {
-    const body = (await response.json().catch(() => ({}))) as { error?: string };
-    throw new Error(body.error || `platform_bootstrap_${response.status}`);
+    if (!response.ok) {
+      const body = (await response.json().catch(() => ({}))) as { error?: string };
+      if (DEBUG) {
+        console.warn("[Entitlements API] Platform bootstrap unavailable, using legacy tenant", {
+          status: response.status,
+          error: body.error || null,
+          customerId,
+        });
+      }
+      return { tenantId: legacyTenantId, source: "legacy" as const };
+    }
+
+    const platform = (await response.json()) as PlatformBootstrapResponse;
+    const tenantId =
+      platform.binding?.bindingType === "tenant" ? platform.binding.bindingValue?.trim() : "";
+
+    if (!tenantId) {
+      if (DEBUG) {
+        console.warn("[Entitlements API] Platform bootstrap returned no tenant binding, using legacy tenant", {
+          customerId,
+        });
+      }
+      return { tenantId: legacyTenantId, source: "legacy" as const };
+    }
+
+    return { tenantId, source: "platform" as const };
+  } catch (error) {
+    if (DEBUG) {
+      console.warn("[Entitlements API] Platform bootstrap request failed, using legacy tenant", {
+        customerId,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+    return { tenantId: legacyTenantId, source: "legacy" as const };
   }
-
-  const platform = (await response.json()) as PlatformBootstrapResponse;
-  const tenantId =
-    platform.binding?.bindingType === "tenant" ? platform.binding.bindingValue?.trim() : "";
-
-  if (!tenantId) {
-    throw new Error("Platform bootstrap did not return a tenant binding");
-  }
-
-  return { tenantId, source: "platform" as const };
 }
 
 export async function GET(req: NextRequest) {
