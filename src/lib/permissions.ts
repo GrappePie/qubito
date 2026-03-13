@@ -100,6 +100,12 @@ export const DEFAULT_ADMIN_PERMISSIONS: PermissionCode[] = PERMISSION_CATALOG.ma
   (p) => p.code
 );
 
+export const DEFAULT_STAFF_PERMISSIONS: PermissionCode[] = [
+  "pos.use",
+  "tables.manage",
+  "sales.history",
+];
+
 export function normalizePermissions(value: unknown): PermissionCode[] {
   if (!Array.isArray(value)) return [];
   const seen = new Set<PermissionCode>();

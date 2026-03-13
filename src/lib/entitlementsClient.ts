@@ -15,6 +15,7 @@ type VerifiedResponse = {
   ok: boolean;
   sub: string;
   customerId: string | null;
+  tenantId: string | null;
   entitlements: string[];
   iat: number | null;
   exp: number | null;
@@ -68,7 +69,7 @@ export async function getEntitlements(required: string = "pos.basic"): Promise<V
   const verifyResp = await fetch("/api/qubito/entitlements", {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({ token, required, aud: "qubito" }),
+    body: JSON.stringify({ token, required, aud: "qubito", issueSession: true }),
   });
 
   if (DEBUG_ENTITLEMENTS)
@@ -88,6 +89,7 @@ export async function getEntitlements(required: string = "pos.basic"): Promise<V
       ok: verified.ok,
       sub: verified.sub,
       customerId: verified.customerId,
+      tenantId: verified.tenantId,
       entitlements: verified.entitlements,
       iat: verified.iat,
       exp: verified.exp,
