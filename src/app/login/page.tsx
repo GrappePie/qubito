@@ -78,7 +78,9 @@ export default function LoginPage() {
   const showLocalLogin =
     Boolean(tenantId) && (allowLocalDevLogin || (hasAdmin === true && hasLocalLogin === true));
   const canRecoverWithPixelGrimoire = hasAdmin === true;
-  const recoveryValidated = canRecoverWithPixelGrimoire && ent?.ok && ent.iss !== 'qubito';
+  const recoveryRequested = search?.get('recovery') === '1';
+  const recoveryValidated =
+    canRecoverWithPixelGrimoire && recoveryRequested && ent?.ok && ent.iss !== 'qubito';
 
   const checkAdmin = async (tenantId: string) => {
     if (!tenantId) return;
@@ -113,6 +115,10 @@ export default function LoginPage() {
       window.localStorage.setItem('qubito_tenant', tenantFromQuery);
     } catch {}
   }, [tenantFromQuery]);
+
+  useEffect(() => {
+    setShowRecoveryForm(Boolean(recoveryValidated));
+  }, [recoveryValidated]);
 
   useEffect(() => {
     if (!ent?.ok || isLocalBypass) return;
@@ -170,12 +176,13 @@ export default function LoginPage() {
   };
 
   const handleRecoveryAccess = async () => {
-    if (recoveryValidated) {
-      setShowRecoveryForm(true);
-      return;
-    }
     setSsoLoading(true);
-    handleOpenPixelGrimoire();
+    if (typeof window === 'undefined') return;
+    const target = new URL('/login', window.location.origin);
+    target.searchParams.set('recovery', '1');
+    if (tenantId) target.searchParams.set('tenantId', tenantId);
+    const redirect = encodeURIComponent(target.toString());
+    window.location.replace(`${entitlementsBase}/auth/reverify?redirect=${redirect}`);
   };
 
   const handleRecoverLocalLogin = async (e: React.FormEvent) => {
