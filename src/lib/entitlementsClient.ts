@@ -23,7 +23,7 @@ type VerifiedResponse = {
   aud: string | string[] | null;
 };
 
-export async function getEntitlements(required: string = "pos.basic"): Promise<VerifiedResponse> {
+export async function requestEntitlementsToken(required: string = "pos.basic"): Promise<string> {
   const base =
     process.env.NEXT_PUBLIC_ENTITLEMENTS_BASE_URL || process.env.ENTITLEMENTS_BASE_URL || "";
   if (!base) throw new Error("Missing ENTITLEMENTS_BASE_URL/NEXT_PUBLIC_ENTITLEMENTS_BASE_URL");
@@ -63,7 +63,11 @@ export async function getEntitlements(required: string = "pos.basic"): Promise<V
       token ? { tokenLength: token.length } : { token: "missing" }
     );
   if (!token) throw new Error("missing_token");
+  return token;
+}
 
+export async function getEntitlements(required: string = "pos.basic"): Promise<VerifiedResponse> {
+  const token = await requestEntitlementsToken(required);
   if (DEBUG_ENTITLEMENTS)
     console.log("[Entitlements] Verifying token via /api/qubito/entitlements");
   const verifyResp = await fetch("/api/qubito/entitlements", {
