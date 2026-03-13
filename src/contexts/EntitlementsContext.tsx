@@ -159,8 +159,6 @@ export function EntitlementsProvider({ children }: { children: React.ReactNode }
           try {
             window.localStorage.setItem("qubito_tenant", tenantHint);
           } catch {}
-          setError(msg);
-          return;
         }
         const base = process.env.NEXT_PUBLIC_ENTITLEMENTS_BASE_URL || process.env.ENTITLEMENTS_BASE_URL || "";
         // On unauthenticated, send users to landing sign-in with a redirect
