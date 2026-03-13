@@ -4,10 +4,16 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import { LogIn, Lock, Shield, User } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { useEntitlements } from '@/contexts/EntitlementsContext';
+import { requestEntitlementsToken } from '@/lib/entitlementsClient';
 
 type LoginForm = {
   userId: string;
   password: string;
+};
+
+type RecoveryForm = {
+  password: string;
+  confirmPassword: string;
 };
 
 export default function LoginPage() {
@@ -29,6 +35,12 @@ export default function LoginPage() {
   const [submitting, setSubmitting] = useState(false);
   const [showLoginPassword, setShowLoginPassword] = useState(false);
   const [ssoLoading, setSsoLoading] = useState(false);
+  const [recoverySubmitting, setRecoverySubmitting] = useState(false);
+  const [showRecoveryForm, setShowRecoveryForm] = useState(false);
+  const [recoveryForm, setRecoveryForm] = useState<RecoveryForm>({
+    password: '',
+    confirmPassword: '',
+  });
 
   const entitlementsBase = useMemo(
     () =>
@@ -65,6 +77,8 @@ export default function LoginPage() {
     normalizeTenantId(process.env.NEXT_PUBLIC_DEFAULT_TENANT || '');
   const showLocalLogin =
     Boolean(tenantId) && (allowLocalDevLogin || (hasAdmin === true && hasLocalLogin === true));
+  const canRecoverWithPixelGrimoire = hasAdmin === true;
+  const recoveryValidated = canRecoverWithPixelGrimoire && ent?.ok && ent.iss !== 'qubito';
 
   const checkAdmin = async (tenantId: string) => {
     if (!tenantId) return;
@@ -155,6 +169,71 @@ export default function LoginPage() {
     handleOpenPixelGrimoire();
   };
 
+  const handleRecoveryAccess = async () => {
+    if (recoveryValidated) {
+      setShowRecoveryForm(true);
+      return;
+    }
+    setSsoLoading(true);
+    handleOpenPixelGrimoire();
+  };
+
+  const handleRecoverLocalLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (recoveryForm.password.length < 8) {
+      toast.error('La contraseña debe tener al menos 8 caracteres');
+      return;
+    }
+    if (recoveryForm.password !== recoveryForm.confirmPassword) {
+      toast.error('Las contraseñas no coinciden');
+      return;
+    }
+
+    setRecoverySubmitting(true);
+    try {
+      const token = await requestEntitlementsToken('pos.basic');
+      const res = await fetch('/api/auth/recover-local-login', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          token,
+          password: recoveryForm.password,
+        }),
+      });
+
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}));
+        const msg =
+          body?.error === 'admin_not_found'
+            ? 'No encontramos el administrador vinculado a tu acceso de Pixel Grimoire.'
+            : body?.error === 'weak_password'
+              ? 'La contraseña debe tener al menos 8 caracteres.'
+              : 'No se pudo recuperar el acceso local.';
+        toast.error(msg);
+        return;
+      }
+
+      const data = await res.json();
+      const acc = data.account;
+      if (typeof window !== 'undefined') {
+        window.localStorage.setItem('qubito_tenant', acc.tenantId);
+        window.localStorage.setItem('qubito_sub', acc.userId);
+      }
+      setRecoveryForm({ password: '', confirmPassword: '' });
+      setShowRecoveryForm(false);
+      await checkAdmin(acc.tenantId);
+      await refreshEntitlements().catch(() => {});
+      toast.success('Contraseña local actualizada');
+      const next = search?.get('next');
+      router.replace(next || '/');
+    } catch (error) {
+      console.error(error);
+      toast.error('No se pudo validar tu acceso con Pixel Grimoire');
+    } finally {
+      setRecoverySubmitting(false);
+    }
+  };
+
   const handleOpenPixelGrimoire = () => {
     if (typeof window === 'undefined') return;
     const redirect = encodeURIComponent(window.location.origin);
@@ -242,35 +321,94 @@ export default function LoginPage() {
             </div>
           )}
 
+          {showRecoveryForm && recoveryValidated && (
+            <div className="space-y-4 rounded-xl border border-slate-200 bg-slate-50 p-4">
+              <div>
+                <p className="text-base font-semibold text-slate-800">
+                  Configurar contraseña local
+                </p>
+                <p className="text-sm text-slate-500">
+                  Tu acceso con Pixel Grimoire ya fue validado. Define una nueva contraseña para el administrador local.
+                </p>
+              </div>
+              <form className="space-y-3" onSubmit={handleRecoverLocalLogin}>
+                <div>
+                  <label className="text-sm text-slate-700 flex items-center gap-1">
+                    <Lock className="h-4 w-4" /> Nueva contraseña
+                  </label>
+                  <input
+                    type="password"
+                    className="mt-1 w-full rounded-lg border px-3 py-2 focus:outline-none focus:ring-2 focus:ring-sky-500"
+                    value={recoveryForm.password}
+                    onChange={(e) => setRecoveryForm((f) => ({ ...f, password: e.target.value }))}
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="text-sm text-slate-700 flex items-center gap-1">
+                    <Lock className="h-4 w-4" /> Confirmar contraseña
+                  </label>
+                  <input
+                    type="password"
+                    className="mt-1 w-full rounded-lg border px-3 py-2 focus:outline-none focus:ring-2 focus:ring-sky-500"
+                    value={recoveryForm.confirmPassword}
+                    onChange={(e) => setRecoveryForm((f) => ({ ...f, confirmPassword: e.target.value }))}
+                    required
+                  />
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    type="submit"
+                    disabled={recoverySubmitting}
+                    className="flex-1 inline-flex items-center justify-center gap-2 rounded-lg bg-sky-600 text-white px-4 py-2 font-semibold hover:bg-sky-700 disabled:opacity-60"
+                  >
+                    <Lock className="h-4 w-4" />
+                    {recoverySubmitting ? 'Guardando...' : 'Guardar contraseña'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowRecoveryForm(false)}
+                    className="rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-white"
+                  >
+                    Cancelar
+                  </button>
+                </div>
+              </form>
+            </div>
+          )}
+
           <div className={`${showLocalLogin ? 'pt-4 border-t border-slate-200' : ''} space-y-4`}>
             <div>
               <p className="text-lg font-semibold text-slate-800">
-                {showLocalLogin ? 'Entrar con Pixel Grimoire' : 'Continuar con Pixel Grimoire'}
+                {!hasAdmin
+                  ? 'Continuar con Pixel Grimoire'
+                  : 'Recuperar contraseña con Pixel Grimoire'}
               </p>
               <p className="text-sm text-slate-500">
-                {showLocalLogin
-                  ? 'Usa Pixel Grimoire para enlazar o recuperar acceso al tenant.'
+                {!hasAdmin
+                  ? 'La primera vez se crea automaticamente tu administrador desde esta sesion.'
+                  : recoveryValidated
+                    ? 'Tu sesion de Pixel Grimoire ya fue validada. Ahora puedes definir una nueva contraseña local.'
                   : hasAdmin === true
-                    ? 'Tu administrador ya existe, pero aun no tiene contrasena local. Entra con Pixel Grimoire y configurala desde Usuarios.'
-                    : 'La primera vez se crea automaticamente tu administrador desde esta sesion.'}
+                    ? 'Usa tus credenciales de Pixel Grimoire para recuperar acceso al administrador local.'
+                    : 'Usa Pixel Grimoire para enlazar o recuperar acceso al tenant.'}
               </p>
             </div>
 
             <button
               type="button"
-              onClick={handleSsoLogin}
+              onClick={!hasAdmin ? handleSsoLogin : handleRecoveryAccess}
               disabled={ssoLoading}
               className="w-full inline-flex items-center justify-center gap-2 rounded-lg bg-slate-900 text-white px-4 py-2 font-semibold hover:bg-slate-800 disabled:opacity-60"
             >
               <LogIn className="h-4 w-4" />
-              {ssoLoading ? 'Conectando...' : 'Continuar con Pixel Grimoire'}
-            </button>
-            <button
-              type="button"
-              onClick={handleOpenPixelGrimoire}
-              className="w-full inline-flex items-center justify-center gap-2 rounded-lg border border-slate-200 px-4 py-2 text-sm font-semibold text-slate-700 hover:bg-slate-50"
-            >
-              Ir a iniciar sesion
+              {ssoLoading
+                ? 'Conectando...'
+                : !hasAdmin
+                  ? 'Continuar con Pixel Grimoire'
+                  : recoveryValidated
+                    ? 'Configurar contraseña'
+                    : 'Recuperar contraseña con Pixel Grimoire'}
             </button>
             <p className="text-xs text-slate-500">
               Si ya tienes sesion iniciada en Pixel Grimoire, se conectara automaticamente.
