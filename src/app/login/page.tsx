@@ -96,10 +96,16 @@ export default function LoginPage() {
   }, [tenantFromQuery]);
 
   useEffect(() => {
-    if (!ent?.ok || isLocalBypass || hasAdmin === true) return;
+    if (!ent?.ok || isLocalBypass) return;
+    if (checkingAdmin || hasAdmin === null) return;
+
     const next = search?.get('next');
-    router.replace(next || '/');
-  }, [ent?.ok, hasAdmin, isLocalBypass, router, search]);
+
+    // Only bypass the login screen when Qubito already has a local session.
+    if (ent.iss === 'qubito') {
+      router.replace(next || '/');
+    }
+  }, [checkingAdmin, ent?.iss, ent?.ok, hasAdmin, isLocalBypass, router, search]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
