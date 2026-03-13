@@ -25,6 +25,7 @@ export default function LoginPage() {
   });
   const [checkingAdmin, setCheckingAdmin] = useState(false);
   const [hasAdmin, setHasAdmin] = useState<boolean | null>(null);
+  const [hasLocalLogin, setHasLocalLogin] = useState<boolean | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [showLoginPassword, setShowLoginPassword] = useState(false);
   const [ssoLoading, setSsoLoading] = useState(false);
@@ -62,7 +63,8 @@ export default function LoginPage() {
     tenantFromQuery ||
     tenantFromStorage ||
     normalizeTenantId(process.env.NEXT_PUBLIC_DEFAULT_TENANT || '');
-  const showLocalLogin = Boolean(tenantId) && (hasAdmin === true || allowLocalDevLogin);
+  const showLocalLogin =
+    Boolean(tenantId) && (allowLocalDevLogin || (hasAdmin === true && hasLocalLogin === true));
 
   const checkAdmin = async (tenantId: string) => {
     if (!tenantId) return;
@@ -71,12 +73,15 @@ export default function LoginPage() {
       const res = await fetch(`/api/accounts/bootstrap?tenantId=${encodeURIComponent(tenantId)}`);
       if (!res.ok) {
         setHasAdmin(null);
+        setHasLocalLogin(null);
         return;
       }
       const data = await res.json();
       setHasAdmin(Boolean(data.hasAdmin));
+      setHasLocalLogin(Boolean(data.hasLocalLogin));
     } catch {
       setHasAdmin(null);
+      setHasLocalLogin(null);
     } finally {
       setCheckingAdmin(false);
     }
@@ -245,7 +250,9 @@ export default function LoginPage() {
               <p className="text-sm text-slate-500">
                 {showLocalLogin
                   ? 'Usa Pixel Grimoire para enlazar o recuperar acceso al tenant.'
-                  : 'La primera vez se crea automaticamente tu administrador desde esta sesion.'}
+                  : hasAdmin === true
+                    ? 'Tu administrador ya existe, pero aun no tiene contrasena local. Entra con Pixel Grimoire y configurala desde Usuarios.'
+                    : 'La primera vez se crea automaticamente tu administrador desde esta sesion.'}
               </p>
             </div>
 
