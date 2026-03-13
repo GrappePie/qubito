@@ -3,7 +3,7 @@ import { connectToDatabase } from '@/lib/mongodb';
 import AccountModel from '@/models/Account';
 import RoleModel from '@/models/Role';
 import { PermissionCode, normalizePermissions } from '@/lib/permissions';
-import { hashPassword } from '@/lib/auth';
+import { hashPassword, setSessionCookie, signSession } from '@/lib/auth';
 import { requireAuth } from '@/lib/apiAuth';
 import type { Role } from '@/models/Role';
 import type { Account } from '@/models/Account';
@@ -61,8 +61,12 @@ export async function PATCH(
     }
 
     const updates: Record<string, unknown> = {};
+    const rawUserId = typeof body?.userId === 'string' ? body.userId : '';
     const rawName = typeof body?.displayName === 'string' ? body.displayName : '';
     const rawEmail = typeof body?.email === 'string' ? body.email : '';
+    if (rawUserId.trim() && rawUserId.trim() !== currentAccount.userId) {
+      updates.userId = rawUserId.trim().slice(0, 120);
+    }
     if (rawName.trim()) updates.displayName = rawName.trim().slice(0, 80);
     if (rawEmail.trim() || rawEmail === '') {
       updates.email = rawEmail.trim().slice(0, 120) || null;
@@ -125,10 +129,26 @@ export async function PATCH(
       if (roleDoc) roleForResponse = serializeRole(roleDoc);
     }
 
-    return NextResponse.json({
+    const response = NextResponse.json({
       account: serializeAccount(updated, roleForResponse),
     });
+
+    if (currentAccount._id.toString() === requester._id.toString()) {
+      const token = signSession({
+        sub: updated.userId,
+        tenantId,
+        roleId: updated.roleId ? updated.roleId.toString() : null,
+        isAdmin: updated.isAdmin,
+      });
+      setSessionCookie(response, token);
+    }
+
+    return response;
   } catch (error: unknown) {
+    const errObj = error as { code?: number };
+    if (errObj?.code === 11000) {
+      return NextResponse.json({ error: 'account_exists' }, { status: 409 });
+    }
     console.error('PATCH /api/accounts/[id] error', error);
     return NextResponse.json(
       { error: 'error_updating_account' },

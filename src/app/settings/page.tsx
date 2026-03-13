@@ -116,6 +116,11 @@ export default function SettingsPage() {
   const [newUserRoleId, setNewUserRoleId] = useState<string>('');
   const [newUserPassword, setNewUserPassword] = useState('');
   const [pendingRoles, setPendingRoles] = useState<Record<string, string>>({});
+  const [editingAccountId, setEditingAccountId] = useState<string | null>(null);
+  const [editingAccountUserId, setEditingAccountUserId] = useState('');
+  const [editingAccountName, setEditingAccountName] = useState('');
+  const [editingAccountEmail, setEditingAccountEmail] = useState('');
+  const [editingAccountPassword, setEditingAccountPassword] = useState('');
 
   useEffect(() => {
     if (!rolePermissions.length && catalog.length) {
@@ -273,6 +278,67 @@ export default function SettingsPage() {
         delete next[user.id];
         return next;
       });
+      await refetchAccounts();
+      await refresh();
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'No se pudo actualizar la cuenta';
+      toast.error(msg);
+    }
+  };
+
+  const startEditAccount = (user: AccountDTO) => {
+    setEditingAccountId(user.id);
+    setEditingAccountUserId(user.userId);
+    setEditingAccountName(user.displayName || '');
+    setEditingAccountEmail(user.email || '');
+    setEditingAccountPassword('');
+    setPendingRoles((prev) => ({
+      ...prev,
+      [user.id]: prev[user.id] || user.roleId || '',
+    }));
+  };
+
+  const cancelEditAccount = (userId?: string) => {
+    setEditingAccountId(null);
+    setEditingAccountUserId('');
+    setEditingAccountName('');
+    setEditingAccountEmail('');
+    setEditingAccountPassword('');
+    if (!userId) return;
+    setPendingRoles((prev) => {
+      const next = { ...prev };
+      delete next[userId];
+      return next;
+    });
+  };
+
+  const handleSaveAccount = async (user: AccountDTO) => {
+    const roleId = pendingRoles[user.id] || user.roleId;
+    if (!editingAccountUserId.trim()) {
+      toast.error('El usuario necesita un identificador');
+      return;
+    }
+    if (!roleId) {
+      toast.error('Selecciona un rol');
+      return;
+    }
+    if (editingAccountPassword && editingAccountPassword.length < 8) {
+      toast.error('La contraseña debe tener al menos 8 caracteres');
+      return;
+    }
+    try {
+      await updateAccount({
+        id: user.id,
+        data: {
+          userId: editingAccountUserId.trim(),
+          displayName: editingAccountName.trim(),
+          email: editingAccountEmail.trim(),
+          password: editingAccountPassword || undefined,
+          roleId,
+        },
+      }).unwrap();
+      toast.success('Cuenta actualizada');
+      cancelEditAccount(user.id);
       await refetchAccounts();
       await refresh();
     } catch (err: unknown) {
@@ -580,17 +646,57 @@ export default function SettingsPage() {
               {accounts.map((user) => (
                 <tr key={user.id}>
                   <td className="px-3 py-2 text-sm text-slate-800">
-                    <div className="font-medium">{user.displayName || user.userId}</div>
-                    <div className="text-xs text-slate-500">ID: {user.userId}</div>
+                    {editingAccountId === user.id ? (
+                      <div className="space-y-2">
+                        <input
+                          value={editingAccountUserId}
+                          onChange={(e) => setEditingAccountUserId(e.target.value)}
+                          className="w-full rounded-lg border px-2 py-1 focus:outline-none focus:ring-2 focus:ring-sky-500"
+                          placeholder="Usuario"
+                        />
+                        <input
+                          value={editingAccountName}
+                          onChange={(e) => setEditingAccountName(e.target.value)}
+                          className="w-full rounded-lg border px-2 py-1 focus:outline-none focus:ring-2 focus:ring-sky-500"
+                          placeholder="Nombre visible"
+                        />
+                      </div>
+                    ) : (
+                      <>
+                        <div className="font-medium">{user.displayName || user.userId}</div>
+                        <div className="text-xs text-slate-500">ID: {user.userId}</div>
+                      </>
+                    )}
                   </td>
                   <td className="px-3 py-2 text-sm text-slate-600">
-                    {user.email ? (
-                      <span className="inline-flex items-center gap-1">
-                        <Mail className="h-3 w-3" />
-                        {user.email}
-                      </span>
+                    {editingAccountId === user.id ? (
+                      <div className="space-y-2">
+                        <input
+                          type="email"
+                          value={editingAccountEmail}
+                          onChange={(e) => setEditingAccountEmail(e.target.value)}
+                          className="w-full rounded-lg border px-2 py-1 focus:outline-none focus:ring-2 focus:ring-sky-500"
+                          placeholder="Correo"
+                        />
+                        <input
+                          type="password"
+                          value={editingAccountPassword}
+                          onChange={(e) => setEditingAccountPassword(e.target.value)}
+                          className="w-full rounded-lg border px-2 py-1 focus:outline-none focus:ring-2 focus:ring-sky-500"
+                          placeholder="Nueva contraseña (opcional)"
+                        />
+                      </div>
                     ) : (
-                      <span className="text-xs text-slate-400">Sin correo</span>
+                      <>
+                        {user.email ? (
+                          <span className="inline-flex items-center gap-1">
+                            <Mail className="h-3 w-3" />
+                            {user.email}
+                          </span>
+                        ) : (
+                          <span className="text-xs text-slate-400">Sin correo</span>
+                        )}
+                      </>
                     )}
                   </td>
                   <td className="px-3 py-2 text-sm text-slate-600">
@@ -632,10 +738,31 @@ export default function SettingsPage() {
                     <div className="flex items-center gap-2 justify-end">
                       <button
                         type="button"
-                        onClick={() => handleUpdateAccount(user)}
+                        onClick={() =>
+                          editingAccountId === user.id
+                            ? cancelEditAccount(user.id)
+                            : startEditAccount(user)
+                        }
+                        className="text-slate-600 hover:text-slate-800"
+                        disabled={updatingAccount || deletingAccount}
+                        title={editingAccountId === user.id ? 'Cancelar edicion' : 'Editar usuario'}
+                      >
+                        {editingAccountId === user.id ? (
+                          <X className="h-4 w-4" />
+                        ) : (
+                          <Pencil className="h-4 w-4" />
+                        )}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          editingAccountId === user.id
+                            ? handleSaveAccount(user)
+                            : handleUpdateAccount(user)
+                        }
                         className="text-emerald-600 hover:text-emerald-700"
                         disabled={updatingAccount || deletingAccount}
-                        title="Guardar cambios"
+                        title={editingAccountId === user.id ? 'Guardar edicion' : 'Guardar cambios'}
                       >
                         <Save className="h-4 w-4" />
                       </button>
