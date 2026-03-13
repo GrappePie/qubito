@@ -45,6 +45,7 @@ export type RolesResponse = {
 export type BootstrapResponse = {
   tenantId: string;
   hasAdmin?: boolean;
+  hasLocalLogin?: boolean;
   needsBootstrap?: boolean;
   currentAccount?: AccountDTO | null;
   account?: AccountDTO;

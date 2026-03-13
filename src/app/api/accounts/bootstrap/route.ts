@@ -51,6 +51,12 @@ export async function GET(req: NextRequest) {
     const hasAdmin = Boolean(
       await AccountModel.exists({ tenantId, isAdmin: true })
     );
+    const hasLocalLogin = Boolean(
+      await AccountModel.exists({
+        tenantId,
+        passwordHash: { $nin: [null, ''] },
+      })
+    );
 
     let currentAccount: AccountPayload | null = null;
     if (userId) {
@@ -66,6 +72,7 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({
       tenantId,
       hasAdmin,
+      hasLocalLogin,
       needsBootstrap: !hasAdmin,
       currentAccount,
       availablePermissions: PERMISSION_CATALOG,
