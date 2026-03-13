@@ -24,6 +24,9 @@ export type AccountInfo = {
   roleName: string | null;
   isAdmin: boolean;
   permissions: PermissionCode[];
+  settings: {
+    tableQuantity: number;
+  };
 };
 
 type AccountsState = {

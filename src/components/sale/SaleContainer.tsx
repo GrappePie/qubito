@@ -116,7 +116,7 @@ const SaleContainer = () => {
         <TopSearchBar value={search} onChange={setSearch} />
         <button
           onClick={() => { setSearch(""); setSelectedCategoryId(null); }}
-          className="h-10 px-3 rounded-lg border text-slate-700 hover:bg-slate-100"
+          className="h-10 px-3 rounded-lg border text-slate-700 hover:bg-slate-100 text-sm"
           title="Limpiar filtros"
         >
           Limpiar filtros
