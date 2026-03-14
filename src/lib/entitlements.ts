@@ -57,3 +57,29 @@ export function verifyEntitlementsToken(token: string, expectedAud: string = "qu
 export function hasEntitlement(payload: EntitlementsPayload, code: string): boolean {
   return Array.isArray(payload.entitlements) && payload.entitlements.includes(code);
 }
+
+export function hasAppEntitlement(payload: EntitlementsPayload, appSlug: string): boolean {
+  const normalizedApp = appSlug.trim().toLowerCase();
+  const prefix = `${normalizedApp}.`;
+  return Array.isArray(payload.entitlements) && payload.entitlements.some((code) => {
+    const normalizedCode = (code || '').trim().toLowerCase();
+    if (normalizedCode.startsWith(prefix)) return true;
+    return normalizedApp === 'qubito' && /^pos\./i.test(normalizedCode);
+  });
+}
+
+export function pickAppEntitlement(
+  payload: EntitlementsPayload,
+  appSlug: string,
+  required?: string | null
+): string | undefined {
+  if (required?.trim()) return required.trim();
+  const normalizedApp = appSlug.trim().toLowerCase();
+  const prefix = `${normalizedApp}.`;
+  const exact = payload.entitlements.find((code) => (code || '').trim().toLowerCase().startsWith(prefix));
+  if (exact) return exact;
+  if (normalizedApp === 'qubito') {
+    return payload.entitlements.find((code) => /^pos\./i.test((code || '').trim().toLowerCase()));
+  }
+  return payload.entitlements[0] || undefined;
+}

@@ -1,4 +1,5 @@
 import type { EntitlementsPayload } from "@/lib/entitlements";
+import { pickAppEntitlement } from "@/lib/entitlements";
 
 const ENTITLEMENTS_BASE_URL =
   process.env.ENTITLEMENTS_BASE_URL || process.env.NEXT_PUBLIC_ENTITLEMENTS_BASE_URL || "";
@@ -14,9 +15,7 @@ export type PlatformBootstrapResponse = {
 };
 
 export function pickEntitlementCode(payload: EntitlementsPayload, required?: string | null) {
-  if (required?.trim()) return required.trim();
-  const preferred = payload.entitlements.find((code) => /^pos\./i.test(code));
-  return preferred || payload.entitlements[0] || undefined;
+  return pickAppEntitlement(payload, "qubito", required);
 }
 
 export async function resolveQubitoTenantId(

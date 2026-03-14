@@ -23,7 +23,7 @@ type VerifiedResponse = {
   aud: string | string[] | null;
 };
 
-export async function requestEntitlementsToken(required: string = "pos.basic"): Promise<string> {
+export async function requestEntitlementsToken(required?: string | null): Promise<string> {
   const base =
     process.env.NEXT_PUBLIC_ENTITLEMENTS_BASE_URL || process.env.ENTITLEMENTS_BASE_URL || "";
   if (!base) throw new Error("Missing ENTITLEMENTS_BASE_URL/NEXT_PUBLIC_ENTITLEMENTS_BASE_URL");
@@ -31,7 +31,7 @@ export async function requestEntitlementsToken(required: string = "pos.basic"): 
   // TEMP DEBUG: log outgoing request to entitlements token endpoint
   if (DEBUG_ENTITLEMENTS)
     console.log("[Entitlements] POST", `${base}/api/entitlements/token`, {
-      entitlementCode: required,
+      entitlementCode: required || undefined,
       aud: "qubito",
     });
 
@@ -39,7 +39,7 @@ export async function requestEntitlementsToken(required: string = "pos.basic"): 
     method: "POST",
     credentials: "include",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({ entitlementCode: required, aud: "qubito" }),
+    body: JSON.stringify(required ? { entitlementCode: required, aud: "qubito" } : { aud: "qubito" }),
   });
 
   if (DEBUG_ENTITLEMENTS)
@@ -66,14 +66,14 @@ export async function requestEntitlementsToken(required: string = "pos.basic"): 
   return token;
 }
 
-export async function getEntitlements(required: string = "pos.basic"): Promise<VerifiedResponse> {
+export async function getEntitlements(required?: string | null): Promise<VerifiedResponse> {
   const token = await requestEntitlementsToken(required);
   if (DEBUG_ENTITLEMENTS)
     console.log("[Entitlements] Verifying token via /api/qubito/entitlements");
   const verifyResp = await fetch("/api/qubito/entitlements", {
     method: "POST",
     headers: { "content-type": "application/json" },
-    body: JSON.stringify({ token, required, aud: "qubito", issueSession: true }),
+    body: JSON.stringify(required ? { token, required, aud: "qubito", issueSession: true } : { token, aud: "qubito", issueSession: true }),
   });
 
   if (DEBUG_ENTITLEMENTS)
