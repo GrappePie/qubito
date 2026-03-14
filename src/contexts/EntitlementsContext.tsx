@@ -74,37 +74,6 @@ export function EntitlementsProvider({ children }: { children: React.ReactNode }
     setError(null);
     setForbidden(false);
 
-    // Try local session first
-    try {
-      const me = await fetch('/api/auth/me', { credentials: 'include' });
-      if (me.ok) {
-        const data = await me.json();
-        const tenant = data?.account?.tenantId as string | undefined;
-        const sub = data?.account?.userId as string | undefined;
-        const entitlements = ['pos.basic'];
-        const local: VerifiedEntitlements = {
-          ok: true,
-          sub: sub || 'local-session',
-          customerId: tenant || null,
-          tenantId: tenant || null,
-          entitlements,
-          iat: null,
-          exp: null,
-          iss: 'qubito',
-          aud: 'qubito',
-        };
-        try {
-          if (typeof window !== 'undefined') {
-            if (tenant) window.localStorage.setItem('qubito_tenant', tenant);
-            if (sub) window.localStorage.setItem('qubito_sub', sub);
-          }
-        } catch {}
-        setData(local);
-        setLoading(false);
-        return;
-      }
-    } catch {}
-
     if (shouldBypass) {
       if (DEBUG_ENTITLEMENTS) console.log("[EntitlementsContext] bypassing entitlements");
       const defaultTenant = process.env.NEXT_PUBLIC_DEFAULT_TENANT || process.env.DEFAULT_TENANT_ID || null;
@@ -131,6 +100,7 @@ export function EntitlementsProvider({ children }: { children: React.ReactNode }
       setLoading(false);
       return;
     }
+
     try {
       const res = await getEntitlements("pos.basic");
       // Persist tenant hints for API calls
@@ -149,11 +119,44 @@ export function EntitlementsProvider({ children }: { children: React.ReactNode }
           tenantId: res.tenantId,
           entitlements: res.entitlements,
         });
+      setData(res);
+      setLoading(false);
+      return;
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : String(e);
       if (DEBUG_ENTITLEMENTS) console.error("[EntitlementsContext] refresh() error", msg);
       // Handle known markers from getEntitlements
       if (msg === "unauthenticated") {
+        // If the commercial session is missing but a local session still exists, keep it as a soft fallback.
+        // Audience/project gating is still enforced whenever Pixel Grimoire is reachable.
+        try {
+          const me = await fetch('/api/auth/me', { credentials: 'include' });
+          if (me.ok) {
+            const localData = await me.json();
+            const tenant = localData?.account?.tenantId as string | undefined;
+            const sub = localData?.account?.userId as string | undefined;
+            const local: VerifiedEntitlements = {
+              ok: true,
+              sub: sub || 'local-session',
+              customerId: tenant || null,
+              tenantId: tenant || null,
+              entitlements: ['pos.basic'],
+              iat: null,
+              exp: null,
+              iss: 'qubito',
+              aud: 'qubito',
+            };
+            try {
+              if (typeof window !== 'undefined') {
+                if (tenant) window.localStorage.setItem('qubito_tenant', tenant);
+                if (sub) window.localStorage.setItem('qubito_sub', sub);
+              }
+            } catch {}
+            setData(local);
+            return;
+          }
+        } catch {}
+
         const tenantHint = readTenantHint();
         if (tenantHint) {
           try {
@@ -177,9 +180,11 @@ export function EntitlementsProvider({ children }: { children: React.ReactNode }
         }
       }
       if (msg === "missing_entitlement" || msg === "forbidden") {
+        setData(null);
         setForbidden(true);
         setError(msg);
       } else {
+        setData(null);
         setError(msg);
       }
     } finally {
