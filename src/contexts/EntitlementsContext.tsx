@@ -82,7 +82,7 @@ export function EntitlementsProvider({ children }: { children: React.ReactNode }
         sub: "local-dev",
         customerId: defaultTenant,
         tenantId: defaultTenant,
-        entitlements: ["pos.basic"],
+        entitlements: ["qubito.apprentice"],
         iat: null,
         exp: null,
         iss: "localhost",
@@ -102,7 +102,7 @@ export function EntitlementsProvider({ children }: { children: React.ReactNode }
     }
 
     try {
-      const res = await getEntitlements("pos.basic");
+      const res = await getEntitlements();
       // Persist tenant hints for API calls
       try {
         if (typeof window !== 'undefined') {
@@ -140,7 +140,7 @@ export function EntitlementsProvider({ children }: { children: React.ReactNode }
               sub: sub || 'local-session',
               customerId: tenant || null,
               tenantId: tenant || null,
-              entitlements: ['pos.basic'],
+              entitlements: ['qubito.apprentice'],
               iat: null,
               exp: null,
               iss: 'qubito',

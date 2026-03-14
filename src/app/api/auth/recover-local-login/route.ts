@@ -26,7 +26,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "invalid_recovery_token" }, { status: 401 });
     }
 
-    const resolvedTenant = await resolveQubitoTenantId(payload, "pos.basic");
+    const resolvedTenant = await resolveQubitoTenantId(payload);
     const tenantId = resolvedTenant.tenantId;
     if (!tenantId) {
       return NextResponse.json({ error: "missing_tenant" }, { status: 400 });

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { verifyEntitlementsToken, hasEntitlement } from "@/lib/entitlements";
+import { verifyEntitlementsToken, hasAppEntitlement, hasEntitlement } from "@/lib/entitlements";
 import { connectToDatabase } from "@/lib/mongodb";
 import AccountModel from "@/models/Account";
 import RoleModel from "@/models/Role";
@@ -74,6 +74,11 @@ async function ensureAccountForUser(params: { tenantId: string; userId: string }
   return { account, created: true };
 }
 
+function hasRequiredQubitoAccess(payload: EntitlementsPayload, required?: string | null) {
+  if (required?.trim()) return hasEntitlement(payload, required.trim());
+  return hasAppEntitlement(payload, "qubito");
+}
+
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
@@ -94,10 +99,10 @@ export async function GET(req: NextRequest) {
     }
 
     const payload = verifyEntitlementsToken(token, aud ?? "qubito");
-    if (required && !hasEntitlement(payload, required)) {
+    if (!hasRequiredQubitoAccess(payload, required)) {
       if (DEBUG)
         console.warn("[Entitlements API] GET: missing entitlement", {
-          required,
+          required: required || "qubito.*",
           entitlements: payload.entitlements,
         });
       return NextResponse.json({ error: "Forbidden: missing entitlement" }, { status: 403 });
@@ -160,10 +165,10 @@ export async function POST(req: NextRequest) {
     }
 
     const payload = verifyEntitlementsToken(token, aud ?? "qubito");
-    if (required && !hasEntitlement(payload, required)) {
+    if (!hasRequiredQubitoAccess(payload, required)) {
       if (DEBUG)
         console.warn("[Entitlements API] POST: missing entitlement", {
-          required,
+          required: required || "qubito.*",
           entitlements: payload.entitlements,
         });
       return NextResponse.json({ error: "Forbidden: missing entitlement" }, { status: 403 });
