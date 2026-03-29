@@ -11,7 +11,7 @@ export async function GET(req: NextRequest) {
         const auth = await requireAuth(req);
         if (!auth.ok) return auth.res;
         const tenant = auth.ctx.account.tenantId || getTenantIdFromRequest(req);
-        const orders = OrderModel.find({ owner: tenant,status:"pending", isActive: { $ne: false } });
+        const orders = await OrderModel.find({ tenantId: tenant, status: "pending" }).lean();
         return NextResponse.json(orders);
     }
     catch (error) {

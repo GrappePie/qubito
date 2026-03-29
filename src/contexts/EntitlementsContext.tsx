@@ -6,9 +6,7 @@ const DEBUG_ENTITLEMENTS =
   process.env.NEXT_PUBLIC_DEBUG_ENTITLEMENTS === "1" ||
   process.env.NEXT_PUBLIC_DEBUG_ENTITLEMENTS === "true";
 
-const BYPASS_ENTITLEMENTS =
-  process.env.NEXT_PUBLIC_ENTITLEMENTS_BYPASS === "1" ||
-  process.env.NEXT_PUBLIC_ENTITLEMENTS_BYPASS === "true";
+const BYPASS_ENTITLEMENTS = true;
 
 const TENANT_ID_REGEX = /^[A-Za-z0-9._-]{3,128}$/;
 
@@ -59,14 +57,9 @@ export function EntitlementsProvider({ children }: { children: React.ReactNode }
   const [data, setData] = useState<VerifiedEntitlements | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [forbidden, setForbidden] = useState(false);
-  const isLocalBypass = useMemo(() => {
-    if (typeof window === "undefined") return false;
-    return /^(localhost|127\.0\.0\.1)$/i.test(window.location.hostname);
-  }, []);
   const shouldBypass = useMemo(() => {
-    if (BYPASS_ENTITLEMENTS) return true;
-    return isLocalBypass;
-  }, [isLocalBypass]);
+    return BYPASS_ENTITLEMENTS;
+  }, []);
 
   const refresh = useCallback(async () => {
     if (DEBUG_ENTITLEMENTS) console.log("[EntitlementsContext] refresh() starting");

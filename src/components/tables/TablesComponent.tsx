@@ -1,15 +1,13 @@
 "use client";
+import { useEffect } from "react";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
-import { setActiveTable, selectSubtotalForTable, startQuickOrder } from "@/store/slices/cartSlice";
+import { setActiveTable, selectSubtotalForTable, startQuickOrder, hydrateFromOrders } from "@/store/slices/cartSlice";
 import { useRouter } from "next/navigation";
-import {useAccounts} from "@/contexts/AccountsContext";
-import {useGetOrdersQuery} from "@/store/slices/ordersApi";
+import { useAccounts } from "@/contexts/AccountsContext";
+import { useGetOrdersQuery } from "@/store/slices/ordersApi";
 
 interface TableProps {
     number: number;
-}
-interface TablesComponentProps {
-    tables: TableProps[];
 }
 
 const Table = ({ number }: TableProps) => {
@@ -31,16 +29,25 @@ const Table = ({ number }: TableProps) => {
     );
 };
 
-const TablesComponent = ({tables}:TablesComponentProps) => {
-    const { account, availablePermissions, refresh, hasPermission } = useAccounts();
-    const {data} = useGetOrdersQuery();
+const TablesComponent = () => {
+    const { account } = useAccounts();
+    const { data } = useGetOrdersQuery();
     const tableQuantity = account?.settings?.tableQuantity;
     const dispatch = useAppDispatch();
     const router = useRouter();
     const quickSubtotal = useAppSelector(selectSubtotalForTable('standalone'));
     const quickOccupied = quickSubtotal > 0;
     const handleQuick = () => { dispatch(startQuickOrder()); router.push('/sale'); };
-    console.log("Orders LOKAS",data);
+    const tables = Array.from({ length: tableQuantity || 1 }, (_, i) => ({
+        number: i + 1,
+    }));
+
+    useEffect(() => {
+        if (data && data.length > 0) {
+            dispatch(hydrateFromOrders(data));
+        }
+    }, [data, dispatch]);
+
     return (
         <div className={"grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-6 my-6 mx-4"}>
             <button onClick={handleQuick}

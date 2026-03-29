@@ -100,6 +100,7 @@ export const ordersApi = createApi({
         url: "orders",
         method: "GET",
       }),
+      providesTags: [{ type: "Orders" as const, id: "LIST" }],
     }),
     getOrder: builder.query<OrderDTO | null, string>({
       query: (contextId) => ({

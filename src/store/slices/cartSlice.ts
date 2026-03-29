@@ -27,6 +27,20 @@ const initialState: CartState = {
 interface AddItemPayload { id: string; title: string; price: number; image?: string; stock?: number; sku?: string; }
 interface UpdateQuantityPayload { id: string; delta?: number; quantity?: number; }
 
+export interface HydrateOrderPayload {
+  mode: "table" | "quick";
+  tableNumber?: number | null;
+  items: Array<{
+    productId: string;
+    name: string;
+    price: number;
+    quantity: number;
+    image?: string;
+    stock?: number;
+    sku?: string;
+  }>;
+}
+
 const ensureTable = (state: CartState, tableId: number) => {
   if (!state.carts[tableId]) state.carts[tableId] = [];
 };
@@ -104,11 +118,34 @@ const cartSlice = createSlice({
       } else {
         state.carts[action.payload] = [];
       }
-    }
+    },
+    hydrateFromOrders: (state, action: PayloadAction<HydrateOrderPayload[]>) => {
+      for (const order of action.payload) {
+        const cartItems: CartItem[] = order.items.map(i => ({
+          id: i.productId,
+          title: i.name,
+          price: i.price,
+          quantity: i.quantity,
+          image: i.image,
+          stock: i.stock,
+          sku: i.sku,
+        }));
+        if (order.mode === "table" && order.tableNumber != null) {
+          // Only hydrate if the slot is currently empty (preserve in-session edits)
+          if (!state.carts[order.tableNumber] || state.carts[order.tableNumber].length === 0) {
+            state.carts[order.tableNumber] = cartItems;
+          }
+        } else if (order.mode === "quick") {
+          if (state.standalone.length === 0) {
+            state.standalone = cartItems;
+          }
+        }
+      }
+    },
   }
 });
 
-export const { setActiveTable, startQuickOrder, clearActiveTable, addItem, removeItem, updateQuantity, setActiveCartItems, clearActiveTableCart, clearTableCart } = cartSlice.actions;
+export const { setActiveTable, startQuickOrder, clearActiveTable, addItem, removeItem, updateQuantity, setActiveCartItems, clearActiveTableCart, clearTableCart, hydrateFromOrders } = cartSlice.actions;
 
 // Selectors
 export const selectActiveTableId = (state: { cart: CartState }) => state.cart.activeTableId;
