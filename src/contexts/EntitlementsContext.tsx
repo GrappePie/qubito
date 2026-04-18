@@ -120,36 +120,6 @@ export function EntitlementsProvider({ children }: { children: React.ReactNode }
       if (DEBUG_ENTITLEMENTS) console.error("[EntitlementsContext] refresh() error", msg);
       // Handle known markers from getEntitlements
       if (msg === "unauthenticated") {
-        // If the commercial session is missing but a local session still exists, keep it as a soft fallback.
-        // Audience/project gating is still enforced whenever Pixel Grimoire is reachable.
-        try {
-          const me = await fetch('/api/auth/me', { credentials: 'include' });
-          if (me.ok) {
-            const localData = await me.json();
-            const tenant = localData?.account?.tenantId as string | undefined;
-            const sub = localData?.account?.userId as string | undefined;
-            const local: VerifiedEntitlements = {
-              ok: true,
-              sub: sub || 'local-session',
-              customerId: tenant || null,
-              tenantId: tenant || null,
-              entitlements: ['qubito.apprentice'],
-              iat: null,
-              exp: null,
-              iss: 'qubito',
-              aud: 'qubito',
-            };
-            try {
-              if (typeof window !== 'undefined') {
-                if (tenant) window.localStorage.setItem('qubito_tenant', tenant);
-                if (sub) window.localStorage.setItem('qubito_sub', sub);
-              }
-            } catch {}
-            setData(local);
-            return;
-          }
-        } catch {}
-
         const tenantHint = readTenantHint();
         if (tenantHint) {
           try {
