@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { LogIn, Lock, Shield, User } from 'lucide-react';
 import { toast } from 'react-hot-toast';
@@ -16,15 +16,16 @@ type RecoveryForm = {
   confirmPassword: string;
 };
 
+const TENANT_ID_REGEX = /^[A-Za-z0-9._-]{3,128}$/;
+
 export default function LoginPage() {
   const router = useRouter();
   const search = useSearchParams();
   const { data: ent, forbidden, refresh: refreshEntitlements } = useEntitlements();
-  const TENANT_ID_REGEX = /^[A-Za-z0-9._-]{3,128}$/;
-  const normalizeTenantId = (val?: string | null) => {
+  const normalizeTenantId = useCallback((val?: string | null) => {
     const v = (val || '').trim();
     return v && TENANT_ID_REGEX.test(v) ? v : '';
-  };
+  }, []);
   const [loginForm, setLoginForm] = useState<LoginForm>({
     userId: '',
     password: '',
@@ -60,9 +61,9 @@ export default function LoginPage() {
 
   const tenantFromEntitlements = useMemo(
     () => normalizeTenantId(ent?.tenantId ?? ent?.customerId),
-    [ent?.customerId, ent?.tenantId]
+    [ent?.customerId, ent?.tenantId, normalizeTenantId]
   );
-  const tenantFromQuery = useMemo(() => normalizeTenantId(search?.get('tenantId')), [search]);
+  const tenantFromQuery = useMemo(() => normalizeTenantId(search?.get('tenantId')), [normalizeTenantId, search]);
   const tenantFromStorage = useMemo(() => {
     if (typeof window === 'undefined') return '';
     try {
@@ -70,7 +71,7 @@ export default function LoginPage() {
     } catch {
       return '';
     }
-  }, []);
+  }, [normalizeTenantId]);
   const tenantId =
     tenantFromEntitlements ||
     tenantFromQuery ||

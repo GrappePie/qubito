@@ -7,12 +7,14 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint . --ext .js,.jsx,.ts,.tsx --max-warnings=0",
+    "smoke:entitlements-jwks": "node --experimental-transform-types scripts/smoke-entitlements-jwks.mjs",
     "test": "npm run lint",
     "seed:products": "node scripts/seed-tenant-items.mjs --tenant",
     "seed:categories": "node scripts/seed-tenant-categories.mjs --tenant"
   },
   "dependencies": {
     "@gsap/react": "^2.1.2",
+    "@pixelgrimoire/license-contracts": "file:./vendor/license-contracts",
     "@reduxjs/toolkit": "^2.2.7",
     "csv-parse": "^5.6.0",
     "gsap": "^3.12.5",

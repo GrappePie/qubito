@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { connectToDatabase } from "@/lib/mongodb";
 import AccountModel from "@/models/Account";
 import RoleModel from "@/models/Role";
-import { verifyEntitlementsToken } from "@/lib/entitlements";
+import { verifyEntitlementsTokenAsync } from "@/lib/entitlements";
 import { hashPassword, setSessionCookie, signSession } from "@/lib/auth";
 import { normalizePermissions } from "@/lib/permissions";
 import { resolveQubitoTenantId } from "@/lib/qubitoPlatform";
@@ -21,7 +21,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "weak_password" }, { status: 400 });
     }
 
-    const payload = verifyEntitlementsToken(token, "qubito-recovery");
+    const payload = await verifyEntitlementsTokenAsync(token, "qubito-recovery");
     if (payload.purpose !== "qubito_local_recovery") {
       return NextResponse.json({ error: "invalid_recovery_token" }, { status: 401 });
     }
