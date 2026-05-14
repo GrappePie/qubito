@@ -8,6 +8,8 @@
     "start": "next start",
     "lint": "eslint . --ext .js,.jsx,.ts,.tsx --max-warnings=0",
     "smoke:entitlements-jwks": "node --experimental-transform-types scripts/smoke-entitlements-jwks.mjs",
+    "test:e2e:licensing": "playwright test --grep \"@licensing\"",
+    "qa:local:e2e:licensing": "powershell -ExecutionPolicy Bypass -File scripts/qa-local-e2e-licensing.ps1",
     "test": "npm run lint",
     "seed:products": "node scripts/seed-tenant-items.mjs --tenant",
     "seed:categories": "node scripts/seed-tenant-categories.mjs --tenant"
@@ -30,9 +32,9 @@
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3",
+    "@playwright/test": "^1.59.1",
     "@tailwindcss/postcss": "^4",
     "@types/jsonwebtoken": "^9.0.10",
-    "@types/next": "^8.0.7",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
