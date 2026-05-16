@@ -12,8 +12,8 @@ importers:
         specifier: ^2.1.2
         version: 2.1.2(gsap@3.15.0)(react@19.2.6)
       '@pixelgrimoire/license-contracts':
-        specifier: file:./vendor/license-contracts
-        version: file:vendor/license-contracts
+        specifier: npm:@pixel-grimoire/license-contracts@0.1.3
+        version: '@pixel-grimoire/license-contracts@0.1.3'
       '@reduxjs/toolkit':
         specifier: ^2.2.7
         version: 2.11.2(react-redux@9.2.0(@types/react@19.2.14)(react@19.2.6)(redux@5.0.1))(react@19.2.6)
@@ -480,8 +480,8 @@ packages:
     resolution: {integrity: sha512-nn5ozdjYQpUCZlWGuxcJY/KpxkWQs4DcbMCmKojjyrYDEAGy4Ce19NN4v5MduafTwJlbKc99UA8YhSVqq9yPZA==}
     engines: {node: '>=12.4.0'}
 
-  '@pixelgrimoire/license-contracts@file:vendor/license-contracts':
-    resolution: {directory: vendor/license-contracts, type: directory}
+  '@pixel-grimoire/license-contracts@0.1.3':
+    resolution: {integrity: sha512-JzW8d8pQn9lZAnPhh1mND8p2JD/TZrWoivXQVeMPbKU4XOQ6zJt0YtzV0j2eYwAfyZfmzJCgWzAXfHVk8jlU+w==, tarball: https://npm.pkg.github.com/download/@pixel-grimoire/license-contracts/0.1.3/2dca029995eec1587eeedabe704eb86a894be5aa}
 
   '@playwright/test@1.60.0':
     resolution: {integrity: sha512-O71yZIbAh/PxDMNGns37GHBIfrVkEVyn+AXyIa5dOTfb4/xNvRWV+Vv/NMbNCtODB/pO7vLlF2OTmMVLhmr7Ag==}
@@ -2588,7 +2588,7 @@ snapshots:
 
   '@nolyfill/is-core-module@1.0.39': {}
 
-  '@pixelgrimoire/license-contracts@file:vendor/license-contracts': {}
+  '@pixel-grimoire/license-contracts@0.1.3': {}
 
   '@playwright/test@1.60.0':
     dependencies:
