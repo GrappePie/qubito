@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { verifyEntitlementsToken, hasAppEntitlement, hasEntitlement } from "@/lib/entitlements";
+import { verifyEntitlementsTokenAsync, hasAppEntitlement, hasEntitlement } from "@/lib/entitlements";
 import { connectToDatabase } from "@/lib/mongodb";
 import AccountModel from "@/models/Account";
 import RoleModel from "@/models/Role";
@@ -98,7 +98,7 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ error: "Missing token" }, { status: 400 });
     }
 
-    const payload = verifyEntitlementsToken(token, aud ?? "qubito");
+    const payload = await verifyEntitlementsTokenAsync(token, aud ?? "qubito");
     if (!hasRequiredQubitoAccess(payload, required)) {
       if (DEBUG)
         console.warn("[Entitlements API] GET: missing entitlement", {
@@ -164,7 +164,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Missing token" }, { status: 400 });
     }
 
-    const payload = verifyEntitlementsToken(token, aud ?? "qubito");
+    const payload = await verifyEntitlementsTokenAsync(token, aud ?? "qubito");
     if (!hasRequiredQubitoAccess(payload, required)) {
       if (DEBUG)
         console.warn("[Entitlements API] POST: missing entitlement", {

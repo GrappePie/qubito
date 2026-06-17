@@ -11,7 +11,7 @@ Qubito POS es una plataforma de punto de venta pensada para cafeterias y restaur
 - Configuracion fiscal y de tienda para soportar corte de caja y facturacion.
 
 ## Stack
-- Next.js 14 (TypeScript, App Router).
+- Next.js 16 (TypeScript, App Router).
 - MongoDB via Mongoose.
 - Redux Toolkit + RTK Query.
 - Tailwind CSS y componentes custom.
@@ -62,6 +62,7 @@ Qubito POS es una plataforma de punto de venta pensada para cafeterias y restaur
 - `Docs/QUBITO-POS-UX-FLOWS.md`: flujos de experiencia de usuario paso a paso.
 - `Docs/QUBITO-POS-TECH-ARCH.md`: stack tecnico, modelos y endpoints.
 - `Docs/QUBITO-ENTITLEMENTS.md`: contrato de integracion con landing para accesos.
+- `Docs/QUBITO-ARCHITECTURE-DECISION.md`: preparacion para decidir si Qubito sigue SaaS/MongoDB o evoluciona a local-first.
 
 ## Buenas practicas de desarrollo
 - Mantener cobertura de pruebas (unitarias y e2e) para flujos criticos: venta, inventario, corte de caja.

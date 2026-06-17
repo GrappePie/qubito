@@ -87,6 +87,7 @@ function CashCloseContent() {
   const tickets = data?.tickets ?? [];
   const isOpen = statusData?.open;
   const session = statusData?.session ?? null;
+  const sessionOpenedAt = session?.openedAt;
   const expectedCash =
     typeof statusData?.expectedCash === "number"
       ? statusData.expectedCash
@@ -104,14 +105,14 @@ function CashCloseContent() {
       { label: "Ayer", from: yesterday, to: yesterday },
       { label: "Ultimos 7 dias", from: weekStart, to: todayDate },
     ];
-    if (session?.openedAt) {
-      const opened = new Date(session.openedAt);
+    if (sessionOpenedAt) {
+      const opened = new Date(sessionOpenedAt);
       if (Number.isFinite(opened.getTime())) {
         ranges.unshift({ label: "Desde apertura", from: opened, to: todayDate });
       }
     }
     return ranges;
-  }, [session?.openedAt]);
+  }, [sessionOpenedAt]);
 
   const handleOpen = async () => {
     if (openingAmount < 0) {
