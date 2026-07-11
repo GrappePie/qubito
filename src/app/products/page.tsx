@@ -16,9 +16,12 @@ import { toast } from 'react-hot-toast';
 import MultiCategorySelect from '@/components/common/MultiCategorySelect';
 import { useGetCategoriesQuery, useCreateCategoryMutation, type CategoryDTO } from '@/store/slices/categoriesApi';
 import PermissionGate from '@/components/PermissionGate';
+import { normalizeEditableNumber, type EditableNumber } from '@/utils/numberInputs';
 
 // Tipo alineado con backend (Mongoose usa _id)
 type Product = ProductDTO;
+type ProductNumberField = 'price' | 'cost' | 'stock' | 'lowStock';
+type ProductForm = Omit<Product, ProductNumberField> & Record<ProductNumberField, EditableNumber>;
 
 const emptyProduct: Product = {
     name: '',
@@ -37,6 +40,8 @@ const emptyProduct: Product = {
     variants: [],
 };
 
+const productNumberFields = new Set<ProductNumberField>(['price', 'cost', 'stock', 'lowStock']);
+
 function ProductsContent() {
     // Data desde RTK Query
     const { data: products = [], isLoading, isFetching } = useGetProductsQuery();
@@ -48,7 +53,7 @@ function ProductsContent() {
 
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
-    const [currentProduct, setCurrentProduct] = useState<Product | null>(null);
+    const [currentProduct, setCurrentProduct] = useState<ProductForm | null>(null);
     const [productToDelete, setProductToDelete] = useState<Product | null>(null);
 
     // Categorías únicas derivadas de los productos existentes
@@ -101,10 +106,9 @@ function ProductsContent() {
     const handleChange = (e: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
         if (!currentProduct) return;
         const { name, value } = e.target;
-        const numericFields = new Set(['price', 'cost', 'stock', 'lowStock']);
         setCurrentProduct({
             ...currentProduct,
-            [name]: numericFields.has(name) ? (parseFloat(value as string) || 0) : value
+            [name]: productNumberFields.has(name as ProductNumberField) ? (value === '' ? '' : Number(value)) : value
         });
     };
 
@@ -146,6 +150,10 @@ function ProductsContent() {
 
         const payload: UpsertProductPayload = {
             ...currentProduct,
+            price: normalizeEditableNumber(currentProduct.price),
+            cost: normalizeEditableNumber(currentProduct.cost),
+            stock: normalizeEditableNumber(currentProduct.stock),
+            lowStock: normalizeEditableNumber(currentProduct.lowStock),
             barCode: currentProduct.barCode ?? currentProduct.sku ?? '',
             description: currentProduct.description ?? 'Sin descripción',
             owner: currentProduct.owner ?? 'admin',

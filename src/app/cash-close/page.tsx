@@ -13,6 +13,7 @@ import {
   useOpenCashRegisterMutation,
 } from "@/store/slices/cashRegisterApi";
 import { toast } from "react-hot-toast";
+import { normalizeEditableNumber, type EditableNumber } from "@/utils/numberInputs";
 
 const currencyFormatter = new Intl.NumberFormat("es-MX", {
   style: "currency",
@@ -57,8 +58,8 @@ function CashCloseContent() {
   const today = new Date();
   const [fromDate, setFromDate] = useState(() => toDateInput(today));
   const [toDate, setToDate] = useState(() => toDateInput(today));
-  const [openingAmount, setOpeningAmount] = useState(0);
-  const [closingAmount, setClosingAmount] = useState(0);
+  const [openingAmount, setOpeningAmount] = useState<EditableNumber>(0);
+  const [closingAmount, setClosingAmount] = useState<EditableNumber>(0);
   const [closingNotes, setClosingNotes] = useState("");
 
   const {
@@ -92,8 +93,10 @@ function CashCloseContent() {
     typeof statusData?.expectedCash === "number"
       ? statusData.expectedCash
       : null;
+  const numericOpeningAmount = normalizeEditableNumber(openingAmount);
+  const numericClosingAmount = normalizeEditableNumber(closingAmount);
   const discrepancy =
-    expectedCash == null ? null : roundCurrency(closingAmount - expectedCash);
+    expectedCash == null ? null : roundCurrency(numericClosingAmount - expectedCash);
   const needsReason = discrepancy != null && Math.abs(discrepancy) > 0.009;
 
   const quickRanges = useMemo(() => {
@@ -115,12 +118,12 @@ function CashCloseContent() {
   }, [sessionOpenedAt]);
 
   const handleOpen = async () => {
-    if (openingAmount < 0) {
+    if (numericOpeningAmount < 0) {
       toast.error("El saldo inicial no puede ser negativo");
       return;
     }
     try {
-      await openCashRegister({ openingAmount }).unwrap();
+      await openCashRegister({ openingAmount: numericOpeningAmount }).unwrap();
       toast.success("Caja abierta");
       refetchStatus();
       refetchSummary();
@@ -131,7 +134,7 @@ function CashCloseContent() {
   };
 
   const handleClose = async () => {
-    if (closingAmount < 0) {
+    if (numericClosingAmount < 0) {
       toast.error("El saldo de cierre no puede ser negativo");
       return;
     }
@@ -141,7 +144,7 @@ function CashCloseContent() {
     }
     try {
       await closeCashRegister({
-        closingAmount,
+        closingAmount: numericClosingAmount,
         notes: closingNotes.trim() || undefined,
       }).unwrap();
       toast.success("Caja cerrada");
@@ -223,7 +226,7 @@ function CashCloseContent() {
                     step="0.01"
                     value={closingAmount}
                     onChange={(event) =>
-                      setClosingAmount(Number(event.target.value) || 0)
+                      setClosingAmount(event.target.value === "" ? "" : Number(event.target.value))
                     }
                     className="h-10 rounded border border-slate-300 px-3"
                   />
@@ -257,7 +260,7 @@ function CashCloseContent() {
                     step="0.01"
                     value={openingAmount}
                     onChange={(event) =>
-                      setOpeningAmount(Number(event.target.value) || 0)
+                      setOpeningAmount(event.target.value === "" ? "" : Number(event.target.value))
                     }
                     className="h-10 rounded border border-slate-300 px-3"
                   />
