@@ -12,16 +12,20 @@ interface AdjustStockModalProps {
   onAdjusted?: () => Promise<void> | void;
 }
 
-export default function AdjustStockModal({ product, onClose, onAdjusted }: AdjustStockModalProps) {
+export default function AdjustStockModal({ product, onClose, onAdjusted }: Readonly<AdjustStockModalProps>) {
   const [adjustStock, { isLoading }] = useAdjustStockMutation();
-  const [newStock, setNewStock] = useState<number>(product.stock);
+  const [newStock, setNewStock] = useState<number | ''>(product.stock);
   const [reason, setReason] = useState<string>('');
 
-  const handleStockChange = (e: ChangeEvent<HTMLInputElement>) => setNewStock(Number(e.target.value));
+  const handleStockChange = (e: ChangeEvent<HTMLInputElement>) => setNewStock(e.target.value === '' ? '' : Number(e.target.value));
   const handleReasonChange = (e: ChangeEvent<HTMLInputElement>) => setReason(e.target.value);
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
+    if (newStock === '') {
+      toast.error('Agrega la nueva cantidad en stock');
+      return;
+    }
     try {
       await adjustStock({ productId: product._id, newStock, reason }).unwrap();
       toast.success('Stock actualizado');
