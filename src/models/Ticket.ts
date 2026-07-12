@@ -7,6 +7,7 @@ export interface ITicketProduct {
     unitPrice: number;
     total: number;
     sku?: string;
+    notes?: string;
 }
 
 export interface ITicketPayments {
@@ -62,6 +63,7 @@ const TicketSchema = new mongoose.Schema<ITicket>(
                 unitPrice: { type: Number, required: true },
                 total: { type: Number, required: true },
                 sku: { type: String, required: false },
+                notes: { type: String, required: false },
             },
         ],
     },

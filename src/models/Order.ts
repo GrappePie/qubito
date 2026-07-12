@@ -8,6 +8,7 @@ export interface OrderItem {
   image?: string;
   sku?: string;
   stock?: number;
+  notes?: string;
 }
 
 export interface OrderDoc {
@@ -38,6 +39,7 @@ const OrderSchema = new mongoose.Schema<OrderDoc>(
         image: { type: String },
         sku: { type: String },
         stock: { type: Number },
+        notes: { type: String },
       },
     ],
     subtotal: { type: Number, required: true },

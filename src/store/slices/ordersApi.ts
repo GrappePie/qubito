@@ -10,6 +10,7 @@ export interface OrderItemDTO {
   image?: string;
   sku?: string;
   stock?: number;
+  notes?: string;
 }
 
 export interface OrderDTO {
@@ -74,6 +75,7 @@ export interface TicketDTO {
     unitPrice: number;
     total: number;
     sku?: string;
+    notes?: string;
   }>;
   createdAt: string;
   updatedAt: string;

@@ -45,6 +45,7 @@ const SideSummarySale = () => {
                 image: item.image,
                 sku: item.sku,
                 stock: item.stock,
+                notes: item.notes?.trim() || undefined,
             })),
         [items],
     );
@@ -169,7 +170,14 @@ const SideSummarySale = () => {
                         <p className="text-sm text-slate-500">No hay productos en la orden.</p>
                     )}
                     {items.map((item) => (
-                        <CartItemRow key={item.id} id={item.id} title={item.title} price={item.price} quantity={item.quantity} />
+                        <CartItemRow
+                            key={item.id}
+                            id={item.id}
+                            title={item.title}
+                            price={item.price}
+                            quantity={item.quantity}
+                            notes={item.notes}
+                        />
                     ))}
                 </div>
             </div>

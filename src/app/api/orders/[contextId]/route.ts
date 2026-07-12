@@ -30,6 +30,7 @@ function normalizeItems(raw: unknown): OrderItem[] {
     if (!maybeProductId || !name || quantity <= 0 || price < 0) continue;
     const image = typeof record.image === "string" ? record.image : undefined;
     const sku = typeof record.sku === "string" ? record.sku : undefined;
+    const notes = typeof record.notes === "string" ? record.notes.trim() : "";
     const stockValue = toNumber(record.stock, NaN);
     const stock = Number.isFinite(stockValue) ? stockValue : undefined;
     items.push({
@@ -40,6 +41,7 @@ function normalizeItems(raw: unknown): OrderItem[] {
       image,
       sku,
       stock,
+      notes: notes || undefined,
     });
   }
   return items;

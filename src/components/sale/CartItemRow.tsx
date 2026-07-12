@@ -1,12 +1,14 @@
 "use client";
+import { useState } from "react";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
-import { removeItem, updateQuantity, selectCartItems } from "@/store/slices/cartSlice";
+import { removeItem, updateItemNotes, updateQuantity, selectCartItems } from "@/store/slices/cartSlice";
 import { toast } from 'react-hot-toast';
 
-interface CartItemRowProps { id: string; title: string; price: number; quantity: number; }
+interface CartItemRowProps { id: string; title: string; price: number; quantity: number; notes?: string; }
 
-const CartItemRow = ({ id, title, price, quantity }: CartItemRowProps) => {
+const CartItemRow = ({ id, title, price, quantity, notes = "" }: CartItemRowProps) => {
   const dispatch = useAppDispatch();
+  const [isNotesOpen, setIsNotesOpen] = useState(Boolean(notes));
   const items = useAppSelector(selectCartItems);
   const item = items.find(i => i.id === id);
   const stock = item?.stock;
@@ -26,34 +28,58 @@ const CartItemRow = ({ id, title, price, quantity }: CartItemRowProps) => {
     if (clamped !== val) toast.error('No puedes exceder el stock disponible');
     dispatch(updateQuantity({ id, quantity: clamped }));
   };
+  const onNotesChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    dispatch(updateItemNotes({ id, notes: e.target.value }));
+  };
 
   return (
-    <div className="bg-white p-2 rounded-lg flex items-center shadow-sm">
-      <div className="flex-1">
-        <p className="font-semibold text-slate-800 truncate" title={title}>{title}</p>
-        <div className="flex items-center mt-1 select-none">
-          <button className="text-slate-500 hover:text-slate-800 px-2" onClick={dec}>-</button>
-          <input
-            type="number"
-            value={quantity}
-            className="text-center px-0!"
-            onChange={onChange}
-            min={1}
-            readOnly={true}
-            {...(typeof stock === 'number' ? { max: stock } : {})}
-          />
-          <button className="text-slate-500 hover:text-slate-800 px-2 disabled:opacity-40" onClick={inc} disabled={atMax}>+</button>
+    <div className="bg-white p-2 rounded-lg shadow-sm">
+      <div className="flex items-center">
+        <div className="flex-1">
+          <p className="font-semibold text-slate-800 truncate" title={title}>{title}</p>
+          <div className="flex items-center mt-1 select-none">
+            <button className="text-slate-500 hover:text-slate-800 px-2" onClick={dec}>-</button>
+            <input
+              type="number"
+              value={quantity}
+              className="text-center px-0!"
+              onChange={onChange}
+              min={1}
+              readOnly={true}
+              {...(typeof stock === 'number' ? { max: stock } : {})}
+            />
+            <button className="text-slate-500 hover:text-slate-800 px-2 disabled:opacity-40" onClick={inc} disabled={atMax}>+</button>
+          </div>
+          {typeof stock === 'number' && (
+            <p className="text-[11px] text-slate-500 mt-0.5">Disponible: {Math.max(0, stock - quantity)}</p>
+          )}
         </div>
-        {typeof stock === 'number' && (
-          <p className="text-[11px] text-slate-500 mt-0.5">Disponible: {Math.max(0, stock - quantity)}</p>
+        <p className="font-semibold text-slate-700 whitespace-nowrap ml-2">${(price * quantity).toFixed(2)}</p>
+        <button className="ml-4 text-red-500 hover:text-red-700" onClick={() => dispatch(removeItem(id))} title="Eliminar del carrito">
+          <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
+          </svg>
+        </button>
+      </div>
+      <div className="mt-1">
+        <button
+          type="button"
+          onClick={() => setIsNotesOpen((open) => !open)}
+          className={`text-[11px] font-medium ${notes ? "text-sky-700" : "text-slate-400"} hover:text-sky-700`}
+        >
+          {notes ? "Editar nota" : "Nota"}
+        </button>
+        {isNotesOpen && (
+          <textarea
+            value={notes}
+            onChange={onNotesChange}
+            placeholder="Ej. sin picante"
+            maxLength={180}
+            rows={2}
+            className="mt-1 w-full resize-none rounded-md border border-slate-200 bg-slate-50 px-2 py-1 text-xs text-slate-700 outline-none focus:border-sky-400 focus:bg-white focus:ring-1 focus:ring-sky-400"
+          />
         )}
       </div>
-      <p className="font-semibold text-slate-700 whitespace-nowrap ml-2">${(price * quantity).toFixed(2)}</p>
-      <button className="ml-4 text-red-500 hover:text-red-700" onClick={() => dispatch(removeItem(id))} title="Eliminar del carrito">
-        <svg className="h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M14.74 9l-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 01-2.244 2.077H8.084a2.25 2.25 0 01-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 00-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 013.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 00-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 00-7.5 0" />
-        </svg>
-      </button>
     </div>
   );
 };

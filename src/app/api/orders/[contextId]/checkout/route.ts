@@ -23,6 +23,7 @@ function sanitizeItems(raw: unknown, fallback: OrderItem[] = []): OrderItem[] {
     const price = toNumber(record.price);
     if (!productId || !name || quantity <= 0 || price < 0) continue;
     const stockValue = toNumber(record.stock, NaN);
+    const notes = typeof record.notes === "string" ? record.notes.trim() : "";
     normalized.push({
       productId,
       name,
@@ -31,6 +32,7 @@ function sanitizeItems(raw: unknown, fallback: OrderItem[] = []): OrderItem[] {
       image: typeof record.image === "string" ? record.image : undefined,
       sku: typeof record.sku === "string" ? record.sku : undefined,
       stock: Number.isFinite(stockValue) ? stockValue : undefined,
+      notes: notes || undefined,
     });
   }
   return normalized.length ? normalized : fallback;
@@ -118,6 +120,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ con
         unitPrice: item.price,
         total: item.price * item.quantity,
         sku: item.sku,
+        notes: item.notes,
       })),
     });
 

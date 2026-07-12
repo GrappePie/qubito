@@ -96,13 +96,14 @@ const SaleContainer = () => {
       image: item.image,
       stock: item.stock,
       sku: item.sku,
+      notes: item.notes,
     }));
     const sameLength = incoming.length === cartItems.length;
     const hasSameItems =
       sameLength &&
       incoming.every((incomingItem) => {
         const match = cartItems.find((c) => c.id === incomingItem.id);
-        return match && match.quantity === incomingItem.quantity;
+        return match && match.quantity === incomingItem.quantity && (match.notes ?? "") === (incomingItem.notes ?? "");
       });
     if (!hasSameItems) {
       dispatch(setActiveCartItems(incoming));

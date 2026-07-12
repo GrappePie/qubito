@@ -10,6 +10,7 @@ export interface CartItem {
   image?: string;
   stock?: number; // máximo permitido según inventario
   sku?: string;
+  notes?: string;
 }
 
 interface CartState {
@@ -26,6 +27,7 @@ const initialState: CartState = {
 
 interface AddItemPayload { id: string; title: string; price: number; image?: string; stock?: number; sku?: string; }
 interface UpdateQuantityPayload { id: string; delta?: number; quantity?: number; }
+interface UpdateNotesPayload { id: string; notes: string; }
 
 export interface HydrateOrderPayload {
   mode: "table" | "quick";
@@ -38,6 +40,7 @@ export interface HydrateOrderPayload {
     image?: string;
     stock?: number;
     sku?: string;
+    notes?: string;
   }>;
 }
 
@@ -97,6 +100,12 @@ const cartSlice = createSlice({
         item.quantity = Math.min(Math.max(1, item.quantity + delta), effMax);
       }
     },
+    updateItemNotes: (state, action: PayloadAction<UpdateNotesPayload>) => {
+      const items = getActiveItems(state);
+      const item = items.find(i => i.id === action.payload.id);
+      if (!item) return;
+      item.notes = action.payload.notes;
+    },
     setActiveCartItems: (state, action: PayloadAction<CartItem[]>) => {
       if (state.activeTableId == null) {
         state.standalone = action.payload;
@@ -129,6 +138,7 @@ const cartSlice = createSlice({
           image: i.image,
           stock: i.stock,
           sku: i.sku,
+          notes: i.notes,
         }));
         if (order.mode === "table" && order.tableNumber != null) {
           // Only hydrate if the slot is currently empty (preserve in-session edits)
@@ -145,7 +155,7 @@ const cartSlice = createSlice({
   }
 });
 
-export const { setActiveTable, startQuickOrder, clearActiveTable, addItem, removeItem, updateQuantity, setActiveCartItems, clearActiveTableCart, clearTableCart, hydrateFromOrders } = cartSlice.actions;
+export const { setActiveTable, startQuickOrder, clearActiveTable, addItem, removeItem, updateQuantity, updateItemNotes, setActiveCartItems, clearActiveTableCart, clearTableCart, hydrateFromOrders } = cartSlice.actions;
 
 // Selectors
 export const selectActiveTableId = (state: { cart: CartState }) => state.cart.activeTableId;
