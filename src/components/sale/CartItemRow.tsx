@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import { ChevronDown, MessageSquare } from "lucide-react";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { removeItem, updateItemNotes, updateQuantity, selectCartItems } from "@/store/slices/cartSlice";
 import { toast } from 'react-hot-toast';
@@ -9,6 +10,7 @@ interface CartItemRowProps { id: string; title: string; price: number; quantity:
 const CartItemRow = ({ id, title, price, quantity, notes = "" }: CartItemRowProps) => {
   const dispatch = useAppDispatch();
   const [isNotesOpen, setIsNotesOpen] = useState(Boolean(notes));
+  const hasNotes = notes.trim().length > 0;
   const items = useAppSelector(selectCartItems);
   const item = items.find(i => i.id === id);
   const stock = item?.stock;
@@ -61,23 +63,46 @@ const CartItemRow = ({ id, title, price, quantity, notes = "" }: CartItemRowProp
           </svg>
         </button>
       </div>
-      <div className="mt-1">
+      <div className="mt-2">
         <button
           type="button"
           onClick={() => setIsNotesOpen((open) => !open)}
-          className={`text-[11px] font-medium ${notes ? "text-sky-700" : "text-slate-400"} hover:text-sky-700`}
+          className={`inline-flex h-7 items-center gap-1.5 rounded-full border px-2.5 text-[11px] font-medium transition-colors ${
+            hasNotes
+              ? "border-sky-200 bg-sky-50 text-sky-700 hover:bg-sky-100"
+              : "border-slate-200 bg-slate-50 text-slate-500 hover:border-slate-300 hover:bg-slate-100"
+          }`}
+          aria-expanded={isNotesOpen}
+          title={hasNotes ? notes : "Agregar nota"}
         >
-          {notes ? "Editar nota" : "Nota"}
+          <MessageSquare size={13} />
+          <span>{hasNotes ? "Nota" : "Agregar nota"}</span>
+          {hasNotes && <span className="h-1.5 w-1.5 rounded-full bg-sky-500" />}
+          <ChevronDown
+            size={13}
+            className={`transition-transform ${isNotesOpen ? "rotate-180" : ""}`}
+          />
         </button>
         {isNotesOpen && (
-          <textarea
-            value={notes}
-            onChange={onNotesChange}
-            placeholder="Ej. sin picante"
-            maxLength={180}
-            rows={2}
-            className="mt-1 w-full resize-none rounded-md border border-slate-200 bg-slate-50 px-2 py-1 text-xs text-slate-700 outline-none focus:border-sky-400 focus:bg-white focus:ring-1 focus:ring-sky-400"
-          />
+          <div className="mt-2 rounded-lg border border-slate-200 bg-slate-50 p-2 shadow-inner">
+            <textarea
+              value={notes}
+              onChange={onNotesChange}
+              placeholder="Ej. sin picante"
+              maxLength={180}
+              rows={2}
+              className="w-full resize-none rounded-md border border-slate-200 bg-white px-2 py-1 text-xs text-slate-700 outline-none focus:border-sky-400 focus:ring-1 focus:ring-sky-400"
+            />
+            <div className="mt-1 flex justify-end">
+              <button
+                type="button"
+                onClick={() => setIsNotesOpen(false)}
+                className="rounded px-2 py-0.5 text-[11px] font-medium text-slate-500 hover:bg-white hover:text-slate-700"
+              >
+                Listo
+              </button>
+            </div>
+          </div>
         )}
       </div>
     </div>
