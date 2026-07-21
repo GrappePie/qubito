@@ -93,8 +93,6 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ con
     const amounts = body?.amounts ?? {};
     const summary = body?.summary ?? {};
 
-    const subtotal = toNumber(amounts?.subtotal, existingOrder?.subtotal ?? 0);
-    const tax = toNumber(amounts?.tax, existingOrder?.tax ?? 0);
     const totalBase = toNumber(amounts?.total, existingOrder?.total ?? 0);
     const tip = toNumber(summary?.tip, 0);
     const totalDue = toNumber(summary?.totalDue, totalBase + tip);
@@ -118,8 +116,6 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ con
       createdBy: sub ?? undefined,
       cashSessionId: sessionDoc._id?.toString?.() ?? String(sessionDoc._id),
       customerName,
-      subtotal,
-      tax,
       tip,
       total: totalDue,
       payments: {

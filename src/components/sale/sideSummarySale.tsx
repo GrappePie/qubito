@@ -193,16 +193,8 @@ const SideSummarySale = () => {
             </div>
 
             <div className="w-full mt-2 pt-4 border-t space-y-1">
-                <div className="flex justify-between text-slate-600">
-                    <span>Subtotal (sin impuesto)</span>
-                    <span>${netSubtotal.toFixed(2)}</span>
-                </div>
-                <div className="flex justify-between text-slate-600">
-                    <span>Impuesto ({(TAX_RATE * 100).toFixed(0)}%)</span>
-                    <span>${tax.toFixed(2)}</span>
-                </div>
                 <div className="flex justify-between font-bold text-xl text-slate-800 mt-2">
-                    <span>Total (incluye impuesto)</span>
+                    <span>Total</span>
                     <span>${total.toFixed(2)}</span>
                 </div>
             </div>

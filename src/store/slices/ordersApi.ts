@@ -64,8 +64,6 @@ export interface TicketDTO {
   tableNumber?: number | null;
   tableId?: string | null;
   tableNameSnapshot?: string | null;
-  subtotal: number;
-  tax: number;
   tip: number;
   total: number;
   payments: {
