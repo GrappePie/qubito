@@ -5,7 +5,7 @@ import ProductsContainer from "@/components/sale/ProductsContainer";
 import React, { useEffect, useMemo, useState } from "react";
 import CategoryChipsContainer, { CategoryChipOption } from "@/components/sale/CategoryChipsContainer";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
-import { selectActiveTableId, selectCartItems, selectIsQuickOrder, setActiveCartItems } from "@/store/slices/cartSlice";
+import { selectActiveTableId, selectActiveTableName, selectCartItems, selectIsQuickOrder, setActiveCartItems } from "@/store/slices/cartSlice";
 import { useRouter } from "next/navigation";
 import { useGetProductsQuery } from "@/store/slices/productsApi";
 import { useGetCategoriesQuery } from "@/store/slices/categoriesApi";
@@ -17,11 +17,12 @@ const SaleContainer = () => {
   const [search, setSearch] = useState("");
   const dispatch = useAppDispatch();
   const activeTableId = useAppSelector(selectActiveTableId);
+  const activeTableName = useAppSelector(selectActiveTableName);
   const isQuick = useAppSelector(selectIsQuickOrder);
   const cartItems = useAppSelector(selectCartItems);
   const router = useRouter();
 
-  const contextId = isQuick ? "quick" : activeTableId != null ? `mesa-${activeTableId}` : null;
+  const contextId = !isQuick && activeTableId != null ? `mesa-${activeTableId}` : null;
 
   const {
     data: products = [],
@@ -124,7 +125,7 @@ const SaleContainer = () => {
         </button>
         <div className="flex items-center gap-4 ml-auto">
           <div className={`px-4 h-10 flex items-center rounded-lg font-semibold text-white ${isQuick ? 'bg-indigo-600' : 'bg-slate-800'}`}>
-            {isQuick ? 'Orden Rápida' : `Mesa #${activeTableId}`}
+            {isQuick ? 'Orden Rápida' : activeTableName ?? `Mesa ${activeTableId}`}
           </div>
           <button
             onClick={() => router.push('/tables')}

@@ -3,44 +3,40 @@ import { useEffect } from "react";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { setActiveTable, selectSubtotalForTable, startQuickOrder, hydrateFromOrders } from "@/store/slices/cartSlice";
 import { useRouter } from "next/navigation";
-import { useAccounts } from "@/contexts/AccountsContext";
 import { useGetOrdersQuery } from "@/store/slices/ordersApi";
+import { useGetTablesQuery, type RestaurantTableDTO } from "@/store/slices/tablesApi";
 
 interface TableProps {
-    number: number;
+    table: RestaurantTableDTO;
 }
 
-const Table = ({ number }: TableProps) => {
-    const subtotal = useAppSelector(selectSubtotalForTable(number));
+const Table = ({ table }: TableProps) => {
+    const subtotal = useAppSelector(selectSubtotalForTable(table.tableId));
     const dispatch = useAppDispatch();
     const router = useRouter();
     const occupied = subtotal > 0;
     const handleClick = () => {
-        dispatch(setActiveTable(number));
+        dispatch(setActiveTable({ id: table.tableId, name: table.name, number: table.legacyNumber ?? null }));
         router.push('/sale');
     };
     return (
         <button onClick={handleClick}
                 className={`rounded-lg p-4 text-white text-center cursor-pointer ${occupied ? 'bg-red-600 hover:bg-red-700' : 'bg-green-500 hover:bg-green-600'} transition-colors flex flex-col justify-between w-full`}
-                aria-label={`Mesa ${number} ${occupied ? 'ocupada' : 'disponible'}`}>
-            <div className="font-bold text-lg">Mesa {number}</div>
+                aria-label={`${table.name} ${occupied ? 'ocupada' : 'disponible'}`}>
+            <div className="font-bold text-lg">{table.name}</div>
             <div className="text-sm">{occupied ? "$" + subtotal.toFixed(2) : 'Disponible'}</div>
         </button>
     );
 };
 
 const TablesComponent = () => {
-    const { account } = useAccounts();
     const { data } = useGetOrdersQuery();
-    const tableQuantity = account?.settings?.tableQuantity;
+    const { data: tables = [], isLoading: tablesLoading, isError: tablesError } = useGetTablesQuery();
     const dispatch = useAppDispatch();
     const router = useRouter();
     const quickSubtotal = useAppSelector(selectSubtotalForTable('standalone'));
     const quickOccupied = quickSubtotal > 0;
     const handleQuick = () => { dispatch(startQuickOrder()); router.push('/sale'); };
-    const tables = Array.from({ length: tableQuantity || 1 }, (_, i) => ({
-        number: i + 1,
-    }));
 
     useEffect(() => {
         if (data && data.length > 0) {
@@ -56,8 +52,10 @@ const TablesComponent = () => {
                 <div className="font-bold text-lg">Orden Rápida</div>
                 <div className="text-sm">{quickOccupied ? "$" + quickSubtotal.toFixed(2) : 'Nueva'}</div>
             </button>
+          {tablesLoading && <div className="text-sm text-slate-500">Cargando mesas...</div>}
+          {tablesError && <div className="text-sm text-rose-600">No pudimos cargar las mesas.</div>}
           {tables.map(t => (
-              <Table key={t.number} number={t.number} />
+              <Table key={t.tableId} table={t} />
           ))}
         </div>
     );

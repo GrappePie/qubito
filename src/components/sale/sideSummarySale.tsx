@@ -2,7 +2,7 @@
 import { useMemo, useState } from "react";
 import CartItemRow from "@/components/sale/CartItemRow";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
-import { selectActiveTableId, selectCartItems, selectIsQuickOrder, selectSubtotal, clearActiveTableCart } from "@/store/slices/cartSlice";
+import { selectActiveTableId, selectActiveTableName, selectActiveTableNumber, selectCartItems, selectIsQuickOrder, selectSubtotal, clearActiveTableCart } from "@/store/slices/cartSlice";
 import { useRouter } from "next/navigation";
 import { toast } from "react-hot-toast";
 import CheckoutDialog from "@/components/sale/CheckoutDialog";
@@ -23,6 +23,8 @@ const SideSummarySale = () => {
     const items = useAppSelector(selectCartItems);
     const inclusiveTotal = useAppSelector(selectSubtotal);
     const activeTableId = useAppSelector(selectActiveTableId);
+    const activeTableName = useAppSelector(selectActiveTableName);
+    const activeTableNumber = useAppSelector(selectActiveTableNumber);
     const isQuick = useAppSelector(selectIsQuickOrder);
     const router = useRouter();
     const [paymentOpen, setPaymentOpen] = useState(false);
@@ -53,14 +55,14 @@ const SideSummarySale = () => {
     const netSubtotal = Number((inclusiveTotal / (1 + TAX_RATE)).toFixed(2));
     const total = Number(inclusiveTotal.toFixed(2));
     const tax = Number((total - netSubtotal).toFixed(2));
-    const orderLabel = isQuick ? "Orden Rápida" : `Mesa #${activeTableId}`;
+    const orderLabel = isQuick ? "Orden Rápida" : activeTableName ?? `Mesa ${activeTableId}`;
     const totalItems = useMemo(() => items.reduce((acc, item) => acc + item.quantity, 0), [items]);
     const canCheckout = Boolean(cashStatus?.open) && !cashLoading;
 
     const handleClear = async () => {
         if (items.length === 0) return;
         try {
-            if (contextId) {
+            if (contextId && !isQuick) {
                 await deleteOrder(contextId).unwrap();
             }
             dispatch(clearActiveTableCart());
@@ -76,6 +78,10 @@ const SideSummarySale = () => {
             toast.error("Agrega productos antes de guardar");
             return;
         }
+        if (isQuick) {
+            toast.error("La orden rápida solo vive localmente hasta cobrar");
+            return;
+        }
         if (!contextId) {
             toast.error("Selecciona una mesa válida antes de guardar");
             return;
@@ -84,7 +90,9 @@ const SideSummarySale = () => {
             await saveOrder({
                 contextId,
                 mode,
-                tableNumber: mode === "table" ? activeTableId ?? null : null,
+                tableNumber: mode === "table" ? activeTableNumber : null,
+                tableId: mode === "table" ? activeTableId : null,
+                tableNameSnapshot: mode === "table" ? orderLabel : null,
                 items: orderItemsPayload,
                 subtotal: netSubtotal,
                 tax,
@@ -121,7 +129,9 @@ const SideSummarySale = () => {
             await checkoutOrder({
                 contextId,
                 mode,
-                tableNumber: mode === "table" ? activeTableId ?? null : null,
+                tableNumber: mode === "table" ? activeTableNumber : null,
+                tableId: mode === "table" ? activeTableId : null,
+                tableNameSnapshot: mode === "table" ? orderLabel : null,
                 items: orderItemsPayload,
                 amounts: {
                     subtotal: netSubtotal,
@@ -196,14 +206,16 @@ const SideSummarySale = () => {
                     <span>${total.toFixed(2)}</span>
                 </div>
             </div>
-            <div className="w-full grid grid-cols-2 gap-4 mt-4">
-                <button
-                    onClick={handleSaveOrder}
-                    className="w-full bg-slate-600 text-white font-bold py-3 rounded-lg hover:bg-slate-700 transition-colors text-lg disabled:bg-slate-400"
-                    disabled={items.length === 0 || isSaving || isFinalizing}
-                >
-                    {isSaving ? "Guardando..." : "Guardar Orden"}
-                </button>
+            <div className={`w-full grid gap-4 mt-4 ${isQuick ? "grid-cols-1" : "grid-cols-2"}`}>
+                {!isQuick && (
+                    <button
+                        onClick={handleSaveOrder}
+                        className="w-full bg-slate-600 text-white font-bold py-3 rounded-lg hover:bg-slate-700 transition-colors text-lg disabled:bg-slate-400"
+                        disabled={items.length === 0 || isSaving || isFinalizing}
+                    >
+                        {isSaving ? "Guardando..." : "Guardar Orden"}
+                    </button>
+                )}
                 <button
                     onClick={() => setPaymentOpen(true)}
                     className="w-full bg-sky-500 text-white font-bold py-3 rounded-lg hover:bg-sky-600 transition-colors text-lg disabled:bg-slate-400"

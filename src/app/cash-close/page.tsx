@@ -411,7 +411,7 @@ function CashCloseContent() {
                   <tr key={ticket.id} className="border-t text-slate-700">
                     <td className="p-3">{formatDateTime(ticket.createdAt)}</td>
                     <td className="p-3">{contextLabel(ticket.orderContext)}</td>
-                    <td className="p-3">{ticket.tableNumber ?? "-"}</td>
+                    <td className="p-3">{ticket.tableNameSnapshot ?? ticket.tableNumber ?? "-"}</td>
                     <td className="p-3">{ticket.customerName ?? "-"}</td>
                     <td className="p-3">{ticket.itemsCount}</td>
                     <td className="p-3 font-semibold text-slate-900">

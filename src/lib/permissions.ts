@@ -15,8 +15,14 @@ export const PERMISSION_CATALOG: PermissionDef[] = [
   {
     code: "tables.manage",
     label: "Mesas y cuentas",
-    description: "Crear y mover cuentas entre mesas.",
+    description: "Usar mesas y cuentas abiertas.",
     area: "Operacion",
+  },
+  {
+    code: "tables.configure",
+    label: "Configurar mesas",
+    description: "Agregar, renombrar y desactivar mesas.",
+    area: "Administracion",
   },
   {
     code: "cash.close",

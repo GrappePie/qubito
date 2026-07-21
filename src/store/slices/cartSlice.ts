@@ -14,13 +14,17 @@ export interface CartItem {
 }
 
 interface CartState {
-  activeTableId: number | null; // null -> quick order
-  carts: Record<number, CartItem[]>; // tableId -> items
+  activeTableId: string | null; // null -> quick order
+  activeTableName: string | null;
+  activeTableNumber: number | null;
+  carts: Record<string, CartItem[]>; // tableId -> items
   standalone: CartItem[]; // quick order items
 }
 
 const initialState: CartState = {
   activeTableId: null,
+  activeTableName: null,
+  activeTableNumber: null,
   carts: {},
   standalone: []
 };
@@ -31,6 +35,8 @@ interface UpdateNotesPayload { id: string; notes: string; }
 
 export interface HydrateOrderPayload {
   mode: "table" | "quick";
+  tableId?: string | null;
+  tableNameSnapshot?: string | null;
   tableNumber?: number | null;
   items: Array<{
     productId: string;
@@ -44,7 +50,15 @@ export interface HydrateOrderPayload {
   }>;
 }
 
-const ensureTable = (state: CartState, tableId: number) => {
+type SetActiveTablePayload = string | number | { id: string; name?: string | null; number?: number | null };
+
+const normalizeTablePayload = (payload: SetActiveTablePayload) => {
+  if (typeof payload === 'number') return { id: String(payload), name: `Mesa ${payload}`, number: payload };
+  if (typeof payload === 'string') return { id: payload, name: null, number: null };
+  return { id: payload.id, name: payload.name ?? null, number: payload.number ?? null };
+};
+
+const ensureTable = (state: CartState, tableId: string) => {
   if (!state.carts[tableId]) state.carts[tableId] = [];
 };
 
@@ -58,15 +72,28 @@ const cartSlice = createSlice({
   name: 'cart',
   initialState,
   reducers: {
-    setActiveTable: (state, action: PayloadAction<number | null>) => {
-      state.activeTableId = action.payload;
-      if (action.payload != null) ensureTable(state, action.payload);
+    setActiveTable: (state, action: PayloadAction<SetActiveTablePayload | null>) => {
+      if (action.payload == null) {
+        state.activeTableId = null;
+        state.activeTableName = null;
+        state.activeTableNumber = null;
+        return;
+      }
+      const table = normalizeTablePayload(action.payload);
+      state.activeTableId = table.id;
+      state.activeTableName = table.name;
+      state.activeTableNumber = table.number;
+      ensureTable(state, table.id);
     },
     startQuickOrder: (state) => {
       state.activeTableId = null;
+      state.activeTableName = null;
+      state.activeTableNumber = null;
     },
     clearActiveTable: (state) => {
       state.activeTableId = null;
+      state.activeTableName = null;
+      state.activeTableNumber = null;
     },
     addItem: (state, action: PayloadAction<AddItemPayload>) => {
       const items = getActiveItems(state);
@@ -121,7 +148,7 @@ const cartSlice = createSlice({
         state.carts[state.activeTableId] = [];
       }
     },
-    clearTableCart: (state, action: PayloadAction<number | 'standalone'>) => {
+    clearTableCart: (state, action: PayloadAction<string | number | 'standalone'>) => {
       if (action.payload === 'standalone') {
         state.standalone = [];
       } else {
@@ -140,14 +167,11 @@ const cartSlice = createSlice({
           sku: i.sku,
           notes: i.notes,
         }));
-        if (order.mode === "table" && order.tableNumber != null) {
+        const orderTableId = order.tableId ?? (order.tableNumber != null ? String(order.tableNumber) : null);
+        if (order.mode === "table" && orderTableId != null) {
           // Only hydrate if the slot is currently empty (preserve in-session edits)
-          if (!state.carts[order.tableNumber] || state.carts[order.tableNumber].length === 0) {
-            state.carts[order.tableNumber] = cartItems;
-          }
-        } else if (order.mode === "quick") {
-          if (state.standalone.length === 0) {
-            state.standalone = cartItems;
+          if (!state.carts[orderTableId] || state.carts[orderTableId].length === 0) {
+            state.carts[orderTableId] = cartItems;
           }
         }
       }
@@ -159,12 +183,14 @@ export const { setActiveTable, startQuickOrder, clearActiveTable, addItem, remov
 
 // Selectors
 export const selectActiveTableId = (state: { cart: CartState }) => state.cart.activeTableId;
+export const selectActiveTableName = (state: { cart: CartState }) => state.cart.activeTableName;
+export const selectActiveTableNumber = (state: { cart: CartState }) => state.cart.activeTableNumber;
 export const selectIsQuickOrder = (state: { cart: CartState }) => state.cart.activeTableId == null;
-export const selectCartItemsForTable = (tableId: number | 'standalone') => (state: { cart: CartState }) => {
+export const selectCartItemsForTable = (tableId: string | number | 'standalone') => (state: { cart: CartState }) => {
   if (tableId === 'standalone') return state.cart.standalone;
   return state.cart.carts[tableId] || [];
 };
-export const selectSubtotalForTable = (tableId: number | 'standalone') => (state: { cart: CartState }) => {
+export const selectSubtotalForTable = (tableId: string | number | 'standalone') => (state: { cart: CartState }) => {
   const items = (tableId === 'standalone') ? state.cart.standalone : (state.cart.carts[tableId] || []);
   return items.reduce((acc, i) => acc + i.price * i.quantity, 0);
 };

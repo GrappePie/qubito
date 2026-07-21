@@ -18,6 +18,8 @@ export interface OrderDTO {
   contextId: string;
   mode: "table" | "quick";
   tableNumber?: number | null;
+  tableId?: string | null;
+  tableNameSnapshot?: string | null;
   status: "pending" | "completed";
   items: OrderItemDTO[];
   subtotal: number;
@@ -32,6 +34,8 @@ export interface SaveOrderPayload {
   contextId: string;
   mode: "table" | "quick";
   tableNumber?: number | null;
+  tableId?: string | null;
+  tableNameSnapshot?: string | null;
   items: OrderItemDTO[];
   subtotal: number;
   tax: number;
@@ -43,6 +47,8 @@ export interface CheckoutOrderPayload {
   contextId: string;
   mode: "table" | "quick";
   tableNumber?: number | null;
+  tableId?: string | null;
+  tableNameSnapshot?: string | null;
   items: OrderItemDTO[];
   amounts: {
     subtotal: number;
@@ -56,6 +62,8 @@ export interface TicketDTO {
   _id: string;
   orderContext: "table" | "quick";
   tableNumber?: number | null;
+  tableId?: string | null;
+  tableNameSnapshot?: string | null;
   subtotal: number;
   tax: number;
   tip: number;

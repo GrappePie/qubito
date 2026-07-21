@@ -5,6 +5,7 @@ export interface CashCloseTicket {
   id: string;
   orderContext: "table" | "quick";
   tableNumber?: number | null;
+  tableNameSnapshot?: string | null;
   customerName?: string | null;
   createdBy?: string | null;
   subtotal: number;

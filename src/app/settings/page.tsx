@@ -30,6 +30,12 @@ import {
   Mail,
 } from 'lucide-react';
 import PermissionGate from '@/components/PermissionGate';
+import {
+  useCreateTableMutation,
+  useDeleteTableMutation,
+  useGetTablesQuery,
+  useUpdateTableMutation,
+} from '@/store/slices/tablesApi';
 
 type PermissionSelectorProps = {
   catalog: PermissionDef[];
@@ -79,6 +85,7 @@ export default function SettingsPage() {
   );
   const isAdmin = Boolean(account?.isAdmin);
   const canManage = isAdmin || hasPermission('settings.manage');
+  const canConfigureTables = isAdmin || hasPermission('tables.configure');
 
   const {
     data: rolesData,
@@ -121,6 +128,16 @@ export default function SettingsPage() {
   const [editingAccountName, setEditingAccountName] = useState('');
   const [editingAccountEmail, setEditingAccountEmail] = useState('');
   const [editingAccountPassword, setEditingAccountPassword] = useState('');
+  const [newTableName, setNewTableName] = useState('');
+  const [editingTableNames, setEditingTableNames] = useState<Record<string, string>>({});
+
+  const {
+    data: tables = [],
+    isLoading: tablesLoading,
+  } = useGetTablesQuery({ includeInactive: true }, { skip: !canConfigureTables });
+  const [createTable, { isLoading: creatingTable }] = useCreateTableMutation();
+  const [updateTable, { isLoading: updatingTable }] = useUpdateTableMutation();
+  const [deleteTable, { isLoading: deletingTable }] = useDeleteTableMutation();
 
   useEffect(() => {
     if (!rolePermissions.length && catalog.length) {
@@ -358,21 +375,62 @@ export default function SettingsPage() {
       toast.error(msg);
     }
   };
-  const onTablesChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const value = parseInt(e.target.value, 10);
-    if(e.type === 'blur') {
-      if (isNaN(value) || value < 1) {
-        e.target.value = '0';
-        toast.error('Ingresa un número válido de mesas');
+
+  const handleCreateTable = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const name = newTableName.trim();
+    if (!name) {
+      toast.error('Asigna un nombre a la mesa');
+      return;
+    }
+    try {
+      await createTable({ name }).unwrap();
+      setNewTableName('');
+      toast.success('Mesa agregada');
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'No se pudo agregar la mesa';
+      toast.error(msg);
+    }
+  };
+
+  const handleRenameTable = async (tableId: string) => {
+    const name = editingTableNames[tableId]?.trim();
+    if (!name) {
+      toast.error('La mesa necesita un nombre');
+      return;
+    }
+    try {
+      await updateTable({ tableId, data: { name } }).unwrap();
+      setEditingTableNames((prev) => {
+        const next = { ...prev };
+        delete next[tableId];
+        return next;
+      });
+      toast.success('Mesa actualizada');
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'No se pudo renombrar la mesa';
+      toast.error(msg);
+    }
+  };
+
+  const handleToggleTable = async (tableId: string, isActive: boolean) => {
+    try {
+      if (isActive) {
+        await deleteTable(tableId).unwrap();
+        toast.success('Mesa desactivada');
+      } else {
+        await updateTable({ tableId, data: { isActive: true } }).unwrap();
+        toast.success('Mesa reactivada');
+      }
+    } catch (err: unknown) {
+      const apiError = err as { data?: { error?: string } };
+      if (apiError?.data?.error === 'table_has_pending_order') {
+        toast.error('No puedes desactivar una mesa con orden pendiente');
         return;
       }
-      updateAccount({ id: account!.id, data: {settings:{ tableQuantity: value }} }).unwrap().then(() => {
-        toast.success(`Cantidad de mesas actualizada a ${value}`);
-      }).catch((err: unknown) => {        const msg = err instanceof Error ? err.message : 'No se pudo actualizar la cantidad de mesas';
-        toast.error(msg);
-      });
+      toast.error('No se pudo actualizar la mesa');
     }
-  }
+  };
 
   return (
     <PermissionGate permission="settings.manage" redirectTo="/">
@@ -409,16 +467,115 @@ export default function SettingsPage() {
         </div>
       )}
 
-      {canManage && (
+      {canManage && canConfigureTables && (
           <section className="bg-white border border-slate-200 rounded-xl p-4 shadow-sm space-y-4">
-            <div className="flex items-center justify-between">
+            <div className="flex items-start justify-between gap-4">
               <div>
                 <h3 className="text-lg font-semibold text-slate-800">Gestion de Mesas</h3>
                 <p className="text-sm text-slate-500">
-                  Define la cantidad de mesas que apareceran.
+                  Agrega, renombra o desactiva mesas del restaurante.
                 </p>
-                <input type="number" onChange={onTablesChange} placeholder={"0"} step={1}  onBlur={onTablesChange}/>
               </div>
+            </div>
+            <form className="flex flex-col gap-2 sm:flex-row" onSubmit={handleCreateTable}>
+              <input
+                value={newTableName}
+                onChange={(e) => setNewTableName(e.target.value)}
+                className="h-10 flex-1 rounded-lg border px-3 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
+                placeholder="Ej. Terraza 1"
+              />
+              <button
+                type="submit"
+                disabled={creatingTable}
+                className="inline-flex h-10 items-center justify-center gap-2 rounded-lg bg-sky-600 px-4 font-semibold text-white hover:bg-sky-700 disabled:opacity-60"
+              >
+                <PlusCircle className="h-4 w-4" />
+                Agregar
+              </button>
+            </form>
+            <div className="divide-y divide-slate-100 rounded-lg border border-slate-200">
+              {tablesLoading && <p className="p-3 text-sm text-slate-500">Cargando mesas...</p>}
+              {!tablesLoading && tables.length === 0 && (
+                <p className="p-3 text-sm text-slate-500">Aun no hay mesas configuradas.</p>
+              )}
+              {tables.map((table) => {
+                const draftName = editingTableNames[table.tableId];
+                const isEditing = draftName != null;
+                return (
+                  <div key={table.tableId} className="flex flex-col gap-2 p-3 sm:flex-row sm:items-center">
+                    <div className="flex-1">
+                      {isEditing ? (
+                        <input
+                          value={draftName}
+                          onChange={(e) =>
+                            setEditingTableNames((prev) => ({ ...prev, [table.tableId]: e.target.value }))
+                          }
+                          className="h-9 w-full rounded-lg border px-3 text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
+                        />
+                      ) : (
+                        <>
+                          <p className="font-semibold text-slate-800">{table.name}</p>
+                          <p className="text-xs text-slate-500">
+                            {table.isActive ? 'Activa' : 'Inactiva'}
+                            {table.legacyNumber ? ` - Mesa original ${table.legacyNumber}` : ''}
+                          </p>
+                        </>
+                      )}
+                    </div>
+                    <div className="flex justify-end gap-2">
+                      {isEditing ? (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => handleRenameTable(table.tableId)}
+                            disabled={updatingTable}
+                            className="rounded-lg bg-emerald-600 px-3 py-2 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-60"
+                          >
+                            Guardar
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setEditingTableNames((prev) => {
+                                const next = { ...prev };
+                                delete next[table.tableId];
+                                return next;
+                              })
+                            }
+                            className="rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50"
+                          >
+                            Cancelar
+                          </button>
+                        </>
+                      ) : (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() =>
+                              setEditingTableNames((prev) => ({ ...prev, [table.tableId]: table.name }))
+                            }
+                            className="rounded-lg border border-slate-200 px-3 py-2 text-sm font-semibold text-slate-600 hover:bg-slate-50"
+                          >
+                            Renombrar
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleToggleTable(table.tableId, table.isActive)}
+                            disabled={deletingTable || updatingTable}
+                            className={`rounded-lg px-3 py-2 text-sm font-semibold disabled:opacity-60 ${
+                              table.isActive
+                                ? 'bg-rose-50 text-rose-700 hover:bg-rose-100'
+                                : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100'
+                            }`}
+                          >
+                            {table.isActive ? 'Desactivar' : 'Reactivar'}
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </section>
         )}

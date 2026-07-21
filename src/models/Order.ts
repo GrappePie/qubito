@@ -14,7 +14,9 @@ export interface OrderItem {
 export interface OrderDoc {
   contextId: string;
   mode: "table" | "quick";
-  tableNumber?: number;
+  tableNumber?: number | null;
+  tableId?: string | null;
+  tableNameSnapshot?: string | null;
   status: "pending" | "completed";
   items: OrderItem[];
   subtotal: number;
@@ -26,9 +28,11 @@ export interface OrderDoc {
 
 const OrderSchema = new mongoose.Schema<OrderDoc>(
   {
-    contextId: { type: String, required: true, unique: true },
+    contextId: { type: String, required: true },
     mode: { type: String, enum: ["table", "quick"], required: true },
     tableNumber: { type: Number },
+    tableId: { type: String, default: null },
+    tableNameSnapshot: { type: String, default: null },
     status: { type: String, enum: ["pending", "completed"], default: "pending" },
     items: [
       {
@@ -50,6 +54,8 @@ const OrderSchema = new mongoose.Schema<OrderDoc>(
   },
   { timestamps: true },
 );
+
+OrderSchema.index({ tenantId: 1, contextId: 1 }, { unique: true });
 
 const OrderModel: Model<OrderDoc> = mongoose.models.Order || mongoose.model<OrderDoc>("Order", OrderSchema);
 

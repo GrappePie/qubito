@@ -73,10 +73,22 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ cont
     }
 
     const mode = normalizeMode(body?.mode);
+    if (mode === "quick") {
+      return NextResponse.json({ error: "quick_orders_are_local" }, { status: 400 });
+    }
+    const tableId =
+      mode === "table" && typeof body?.tableId === "string" && body.tableId.trim()
+        ? body.tableId.trim()
+        : null;
     const tableNumber = mode === "table" ? toNumber(body?.tableNumber, NaN) : null;
-    if (mode === "table" && (!Number.isInteger(tableNumber) || tableNumber! <= 0)) {
+    if (mode === "table" && !tableId && (!Number.isInteger(tableNumber) || tableNumber! <= 0)) {
       return NextResponse.json({ error: "Número de mesa inválido" }, { status: 400 });
     }
+    const resolvedTableId = mode === "table" ? tableId ?? String(tableNumber) : null;
+    const tableNameSnapshot =
+      mode === "table" && typeof body?.tableNameSnapshot === "string"
+        ? body.tableNameSnapshot.trim().slice(0, 60) || null
+        : null;
 
     const subtotal = toNumber(body?.subtotal, 0);
     const tax = toNumber(body?.tax, 0);
@@ -85,7 +97,9 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ cont
     const updatePayload = {
       contextId,
       mode,
-      tableNumber: mode === "table" ? tableNumber : null,
+      tableNumber: mode === "table" && Number.isInteger(tableNumber) ? tableNumber : null,
+      tableId: resolvedTableId,
+      tableNameSnapshot,
       status: "pending" as const,
       items,
       subtotal,

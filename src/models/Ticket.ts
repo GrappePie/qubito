@@ -21,6 +21,8 @@ export interface ITicket {
     _id: string;
     orderContext: "table" | "quick";
     tableNumber?: number | null;
+    tableId?: string | null;
+    tableNameSnapshot?: string | null;
     customerId?: string;
     customerName?: string;
     createdBy?: string;
@@ -40,6 +42,8 @@ const TicketSchema = new mongoose.Schema<ITicket>(
     {
         orderContext: { type: String, enum: ["table", "quick"], required: true },
         tableNumber: { type: Number, required: false },
+        tableId: { type: String, required: false, default: null },
+        tableNameSnapshot: { type: String, required: false, default: null },
         customerId: { type: String, required: false },
         customerName: { type: String, required: false },
         createdBy: { type: String, required: false },

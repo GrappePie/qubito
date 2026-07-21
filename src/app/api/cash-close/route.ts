@@ -109,6 +109,7 @@ export async function GET(req: NextRequest) {
         id: ticket._id?.toString?.() ?? String(ticket._id),
         orderContext: ticket.orderContext,
         tableNumber: ticket.tableNumber ?? null,
+        tableNameSnapshot: ticket.tableNameSnapshot ?? null,
         customerName: ticket.customerName ?? null,
         createdBy: ticket.createdBy ?? null,
         subtotal: toNumber(ticket.subtotal),

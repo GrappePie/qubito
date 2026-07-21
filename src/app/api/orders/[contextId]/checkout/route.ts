@@ -60,16 +60,30 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ con
       return NextResponse.json({ error: "cash_closed" }, { status: 409 });
     }
 
-    const existingOrder = await OrderModel.findOne({ contextId, status: "pending", tenantId: tenant });
+    const requestedMode = body?.mode === "table" ? "table" : "quick";
+    const existingOrder =
+      requestedMode === "table"
+        ? await OrderModel.findOne({ contextId, status: "pending", tenantId: tenant })
+        : null;
     if (!existingOrder && !Array.isArray(body?.items)) {
       return NextResponse.json({ error: "No encontramos una orden pendiente para finalizar" }, { status: 404 });
     }
 
     const mode = (existingOrder?.mode ?? (body?.mode === "table" ? "table" : "quick")) as "table" | "quick";
+    const bodyTableId = typeof body?.tableId === "string" && body.tableId.trim() ? body.tableId.trim() : null;
+    const tableId = mode === "table" ? existingOrder?.tableId ?? bodyTableId : null;
     const tableNumber = mode === "table" ? existingOrder?.tableNumber ?? toNumber(body?.tableNumber, NaN) : null;
-    if (mode === "table" && (!Number.isInteger(tableNumber) || tableNumber! <= 0)) {
+    if (mode === "table" && !tableId && (!Number.isInteger(tableNumber) || tableNumber! <= 0)) {
       return NextResponse.json({ error: "Número de mesa inválido" }, { status: 400 });
     }
+    const resolvedTableId = mode === "table" ? tableId ?? String(tableNumber) : null;
+    const tableNameSnapshot =
+      mode === "table"
+        ? existingOrder?.tableNameSnapshot ??
+          (typeof body?.tableNameSnapshot === "string"
+            ? body.tableNameSnapshot.trim().slice(0, 60) || null
+            : null)
+        : null;
 
     const items = sanitizeItems(body?.items, existingOrder?.items ?? []);
     if (items.length === 0) {
@@ -97,7 +111,9 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ con
 
     const ticket = await TicketModel.create({
       orderContext: mode,
-      tableNumber: mode === "table" ? tableNumber : undefined,
+      tableNumber: mode === "table" && Number.isInteger(tableNumber) ? tableNumber : undefined,
+      tableId: resolvedTableId,
+      tableNameSnapshot,
       customerId: tenant,
       createdBy: sub ?? undefined,
       cashSessionId: sessionDoc._id?.toString?.() ?? String(sessionDoc._id),
